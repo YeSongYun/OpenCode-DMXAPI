@@ -1,3 +1,9 @@
 jihua
 .claude/settings.local.json
 dmxapi-config/dmxapi-config.exe
+.claude/settings.json
+dmxapi-config/dmxapi-config-linux
+.gitignore
+dmxapi-config/dmxapi-config-macos-amd64
+dmxapi-config/dmxapi-config-macos-arm64
+dmxapi-config/dmxapi-config-windows.exe

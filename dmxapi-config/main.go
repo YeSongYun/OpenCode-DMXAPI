@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"dmxapi-config/internal/api"
 	"dmxapi-config/internal/auth"
 	"dmxapi-config/internal/config"
 	"dmxapi-config/internal/input"
@@ -58,8 +59,20 @@ func main() {
 	ui.PrintSuccess("API Key 已设置")
 	fmt.Println()
 
-	// 步骤3: 收集模型名称
-	ui.PrintStep(3, "配置模型")
+	// 步骤3: 测试API连接
+	ui.PrintStep(3, "测试 API 连接")
+	ui.PrintInfo("正在使用 claude-opus-4-5-20251101 测试连接...")
+	tester := api.NewTester(url, apiKey)
+	if err := tester.TestConnection(); err != nil {
+		ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", err))
+		waitForExit()
+		os.Exit(1)
+	}
+	ui.PrintSuccess("API 连接测试成功！")
+	fmt.Println()
+
+	// 步骤4: 收集模型名称
+	ui.PrintStep(4, "配置模型")
 	models, err := collector.CollectModels()
 	if err != nil {
 		ui.PrintError(fmt.Sprintf("读取模型失败: %v", err))
@@ -78,8 +91,8 @@ func main() {
 	ui.PrintInfo("正在写入配置文件...")
 	fmt.Println()
 
-	// 步骤4: 写入认证配置
-	ui.PrintStep(4, "配置认证信息")
+	// 步骤5: 写入认证配置
+	ui.PrintStep(5, "配置认证信息")
 	authMgr := auth.NewAuthManager("dmxapi", apiKey)
 	authPath, err := authMgr.Login()
 	if err != nil {
@@ -90,8 +103,8 @@ func main() {
 	ui.PrintSuccess(fmt.Sprintf("认证配置完成: %s", authPath))
 	fmt.Println()
 
-	// 步骤5: 生成opencode.json配置文件
-	ui.PrintStep(5, "生成配置文件")
+	// 步骤6: 生成opencode.json配置文件
+	ui.PrintStep(6, "生成配置文件")
 	cfg := config.NewDMXAPIConfig(url, apiKey, models)
 	writer := config.NewWriter()
 	configPath, err := writer.WriteConfig(cfg)
