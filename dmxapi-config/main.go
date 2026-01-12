@@ -61,7 +61,7 @@ func main() {
 
 	// 步骤3: 测试API连接
 	ui.PrintStep(3, "测试 API 连接")
-	ui.PrintInfo("正在使用 claude-opus-4-5-20251101 测试连接...")
+	ui.PrintInfo("正在测试连接...")
 	tester := api.NewTester(url, apiKey)
 	if err := tester.TestConnection(); err != nil {
 		ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", err))

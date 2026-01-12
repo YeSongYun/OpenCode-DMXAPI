@@ -75,7 +75,7 @@ func (c *Collector) CollectAPIKey() (string, error) {
 func (c *Collector) CollectModels() ([]string, error) {
 	fmt.Println("请输入模型名称（多个模型用逗号分隔）")
 	fmt.Println("可用模型列表: https://www.dmxapi.cn/rmb")
-	fmt.Println("示例: gpt-4o,claude-3-5-sonnet-20241022")
+	fmt.Println("示例: claude-opus-4-5-20251101,DeepSeek-V3.2-Fast")
 	fmt.Print("模型: ")
 
 	line, err := c.reader.ReadString('\n')
