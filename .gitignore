@@ -7,3 +7,9 @@ dmxapi-config/dmxapi-config-linux
 dmxapi-config/dmxapi-config-macos-amd64
 dmxapi-config/dmxapi-config-macos-arm64
 dmxapi-config/dmxapi-config-windows.exe
+
+# 根目录二进制文件
+dmxapi-config-linux
+dmxapi-config-windows.exe
+dmxapi-config-macos-arm64
+dmxapi-config-macos-amd64
