@@ -40,27 +40,27 @@ $:
 
         # 2. 编译各平台二进制文件
         - name: 编译 Windows AMD64
-          image: golang:1.21
+          image: golang:latest
           script:
             - CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
 
         - name: 编译 Linux AMD64
-          image: golang:1.21
+          image: golang:latest
           script:
             - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-linux-amd64
 
         - name: 编译 Linux ARM64
-          image: golang:1.21
+          image: golang:latest
           script:
             - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-linux-arm64
 
         - name: 编译 macOS AMD64
-          image: golang:1.21
+          image: golang:latest
           script:
             - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-darwin-amd64
 
         - name: 编译 macOS ARM64
-          image: golang:1.21
+          image: golang:latest
           script:
             - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
 
