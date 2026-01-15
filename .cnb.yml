@@ -1,0 +1,138 @@
+# ============================================
+# CNB 云原生构建配置
+# ============================================
+
+# 主分支推送 - 同步到 GitHub
+main:
+  push:
+    - imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
+      stages:
+        - name: sync to github with rebase
+          image: tencentcom/git-sync
+          settings:
+            target_url: https://github.com/YeSongYun/OpenCode-DMXAPI.git
+            auth_type: https
+            username: ${GIT_USERNAME}
+            password: ${GIT_ACCESS_TOKEN}
+            sync_mode: rebase
+
+# Tag 推送 - 自动发布 Release
+$:
+  tag_push:
+    - imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
+      stages:
+        # 0. 先同步 Tag 到 GitHub
+        - name: sync tag to github
+          image: alpine/git
+          script:
+            - git remote add github https://${GIT_USERNAME}:${GIT_ACCESS_TOKEN}@github.com/YeSongYun/OpenCode-DMXAPI.git || true
+            - git push github ${CNB_BRANCH} --force
+
+        # 1. 生成更新日志（使用 git-cliff 支持 commit 自动分类）
+        - name: 生成更新日志
+          image: cnbcool/default-build-env
+          script:
+            - curl -sSL https://github.com/orhun/git-cliff/releases/download/v2.7.0/git-cliff-2.7.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+            - git fetch --tags origin
+            - ./git-cliff-2.7.0/git-cliff --config cliff.toml --latest --strip header
+          exports:
+            stdout: RELEASE_NOTES
+
+        # 2. 编译各平台二进制文件
+        - name: 编译 Windows AMD64
+          image: golang:1.21
+          script:
+            - CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
+
+        - name: 编译 Linux AMD64
+          image: golang:1.21
+          script:
+            - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-linux-amd64
+
+        - name: 编译 Linux ARM64
+          image: golang:1.21
+          script:
+            - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-linux-arm64
+
+        - name: 编译 macOS AMD64
+          image: golang:1.21
+          script:
+            - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-darwin-amd64
+
+        - name: 编译 macOS ARM64
+          image: golang:1.21
+          script:
+            - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
+
+        # 3. 先创建 Release（必须在上传附件之前）
+        - name: 创建 Release
+          type: git:release
+          options:
+            title: OpenCode DMXAPI ${CNB_BRANCH}
+            description: |
+              ## OpenCode DMXAPI 配置工具 ${CNB_BRANCH}
+
+              一键配置 OpenCode 使用 DMXAPI 服务的跨平台工具。
+
+              ---
+
+              ${RELEASE_NOTES}
+
+              ---
+
+              ### 📥 下载
+
+              | 平台 | 架构 | 文件 |
+              |------|------|------|
+              | Windows | x64 | `opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe` |
+              | Linux | x64 | `opencode-dmxapi-${CNB_BRANCH}-linux-amd64` |
+              | Linux | ARM64 | `opencode-dmxapi-${CNB_BRANCH}-linux-arm64` |
+              | macOS | Intel | `opencode-dmxapi-${CNB_BRANCH}-darwin-amd64` |
+              | macOS | Apple Silicon | `opencode-dmxapi-${CNB_BRANCH}-darwin-arm64` |
+
+              ---
+
+              ### 🛠️ 安装说明
+
+              #### Windows
+              ```powershell
+              # 下载后直接运行
+              .\opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
+              ```
+
+              #### Linux
+              ```bash
+              # 下载并添加执行权限
+              chmod +x opencode-dmxapi-${CNB_BRANCH}-linux-amd64
+              ./opencode-dmxapi-${CNB_BRANCH}-linux-amd64
+              ```
+
+              #### macOS
+              ```bash
+              # 下载并添加执行权限
+              chmod +x opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
+              # 首次运行可能需要在"系统设置 > 隐私与安全性"中允许
+              ./opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
+              ```
+
+              ---
+
+              ### 🔗 相关链接
+
+              - [获取 API Token](https://www.dmxapi.cn/token)
+              - [使用文档](https://cnb.cool/dmxapi/opencode_dmxapi)
+
+        # 4. 再上传附件到已创建的 Release
+        - name: 上传 Release 附件
+          image: cnbcool/attachments
+          settings:
+            attachments:
+              - "./opencode-dmxapi-${CNB_BRANCH}-*"
+            ttl: 0
+
+        # 5. 清理旧版本，只保留最近3个
+        - name: 清理旧版本
+          image: docker.cnb.cool/cnb/plugins/cnbcool/release-clean:latest
+          settings:
+            filter: "RECENT_N=3"
+            debug: false
