@@ -11,25 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: windows
-            goarch: amd64
-            ext: .exe
-          - goos: linux
-            goarch: amd64
-            ext: ''
-          - goos: linux
-            goarch: arm64
-            ext: ''
-          - goos: darwin
-            goarch: amd64
-            ext: ''
-          - goos: darwin
-            goarch: arm64
-            ext: ''
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,45 +22,40 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
-        run: |
-          go build -ldflags="-s -w" -o opencode-dmxapi-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: opencode-dmxapi-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: opencode-dmxapi-${{ github.ref_name }}-*
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Generate changelog
+      # 生成 Changelog
+      - name: Generate Changelog
         id: changelog
-        uses: orhun/git-cliff-action@v3
+        uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
           args: --latest --strip header
+        env:
+          GITHUB_REPO: ${{ github.repository }}
 
+      - name: Build binaries
+        run: |
+          VERSION=${{ github.ref_name }}
+
+          # Windows AMD64
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-windows-amd64.exe
+
+          # Linux AMD64
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-linux-amd64
+
+          # Linux ARM64
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-linux-arm64
+
+          # macOS AMD64
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-darwin-amd64
+
+          # macOS ARM64
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-darwin-arm64
+
+      # 创建 Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          name: OpenCode DMXAPI ${{ github.ref_name }}
           body: |
             ## OpenCode DMXAPI 配置工具 ${{ github.ref_name }}
 
@@ -103,10 +79,34 @@ jobs:
 
             ---
 
+            ### 🛠️ 安装说明
+
+            #### Windows
+            ```powershell
+            .\opencode-dmxapi-${{ github.ref_name }}-windows-amd64.exe
+            ```
+
+            #### Linux
+            ```bash
+            chmod +x opencode-dmxapi-${{ github.ref_name }}-linux-amd64
+            ./opencode-dmxapi-${{ github.ref_name }}-linux-amd64
+            ```
+
+            #### macOS
+            ```bash
+            chmod +x opencode-dmxapi-${{ github.ref_name }}-darwin-arm64
+            ./opencode-dmxapi-${{ github.ref_name }}-darwin-arm64
+            ```
+
+            ---
+
             ### 🔗 相关链接
 
             - [获取 API Token](https://www.dmxapi.cn/token)
             - [使用文档](https://cnb.cool/dmxapi/opencode_dmxapi)
-          files: artifacts/*
-          draft: false
-          prerelease: false
+          files: |
+            opencode-dmxapi-${{ github.ref_name }}-windows-amd64.exe
+            opencode-dmxapi-${{ github.ref_name }}-linux-amd64
+            opencode-dmxapi-${{ github.ref_name }}-linux-arm64
+            opencode-dmxapi-${{ github.ref_name }}-darwin-amd64
+            opencode-dmxapi-${{ github.ref_name }}-darwin-arm64
