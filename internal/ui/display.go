@@ -88,3 +88,31 @@ func PrintComplete() {
 `
 	fmt.Println(colorize(ColorGreen, complete))
 }
+
+// PrintConfigModeHeader 打印配置模式选择标题
+func PrintConfigModeHeader() {
+	fmt.Println()
+	fmt.Println(colorize(ColorCyan, "=== 配置模式选择 ==="))
+	fmt.Println()
+	fmt.Println("检测到现有配置，请选择配置模式:")
+	fmt.Println()
+	fmt.Println("  [1] 完整配置 - 重新配置所有选项 (URL, API Key, 模型)")
+	fmt.Println("  [2] 仅配置模型 - 保留现有 URL 和 API Key，只修改模型列表")
+	fmt.Println()
+}
+
+// PrintExistingConfigInfo 显示当前配置信息
+func PrintExistingConfigInfo(url, maskedAPIKey string, models []string) {
+	fmt.Println()
+	fmt.Println(colorize(ColorCyan, "--- 当前配置信息 ---"))
+	fmt.Printf("  URL: %s\n", url)
+	fmt.Printf("  API Key: %s\n", maskedAPIKey)
+	fmt.Printf("  当前模型: %v\n", models)
+	fmt.Println()
+}
+
+// PrintModelOnlyModeInfo 打印仅模型模式提示
+func PrintModelOnlyModeInfo() {
+	fmt.Println()
+	PrintInfo("您选择了「仅配置模型」模式")
+}

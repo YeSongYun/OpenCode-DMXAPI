@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+// ConfigMode 配置模式
+type ConfigMode int
+
+const (
+	ConfigModeFull      ConfigMode = 1 // 完整配置
+	ConfigModeModelOnly ConfigMode = 2 // 仅配置模型
+)
+
 // UserInput 用户输入的配置信息
 type UserInput struct {
 	URL    string   // API URL (如 https://www.dmxapi.cn)
@@ -23,6 +31,27 @@ type Collector struct {
 func NewCollector() *Collector {
 	return &Collector{
 		reader: bufio.NewReader(os.Stdin),
+	}
+}
+
+// CollectConfigMode 收集配置模式选择
+func (c *Collector) CollectConfigMode() (ConfigMode, error) {
+	fmt.Print("请输入选项 (1 或 2): ")
+
+	input, err := c.reader.ReadString('\n')
+	if err != nil {
+		return 0, fmt.Errorf("读取选项失败: %w", err)
+	}
+
+	input = strings.TrimSpace(input)
+
+	switch input {
+	case "1":
+		return ConfigModeFull, nil
+	case "2":
+		return ConfigModeModelOnly, nil
+	default:
+		return 0, fmt.Errorf("无效的选项，请输入 1 或 2")
 	}
 }
 
