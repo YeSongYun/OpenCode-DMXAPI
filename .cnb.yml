@@ -5,7 +5,10 @@
 # 主分支推送 - 同步到 GitHub
 main:
   push:
-    - imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
+    - runner:
+        tags: cnb:arch:amd64
+        cpus: 1
+      imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
       stages:
         - name: sync to github with rebase
           image: tencentcom/git-sync
@@ -19,7 +22,10 @@ main:
 # Tag 推送 - 自动发布 Release
 $:
   tag_push:
-    - imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
+    - runner:
+        tags: cnb:arch:amd64
+        cpus: 1
+      imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
       stages:
         # 0. 先同步 Tag 到 GitHub
         - name: sync tag to github
@@ -98,41 +104,3 @@ $:
               ```powershell
               # 下载后直接运行
               .\opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
-              ```
-
-              #### Linux
-              ```bash
-              # 下载并添加执行权限
-              chmod +x opencode-dmxapi-${CNB_BRANCH}-linux-amd64
-              ./opencode-dmxapi-${CNB_BRANCH}-linux-amd64
-              ```
-
-              #### macOS
-              ```bash
-              # 下载并添加执行权限
-              chmod +x opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
-              # 首次运行可能需要在"系统设置 > 隐私与安全性"中允许
-              ./opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
-              ```
-
-              ---
-
-              ### 🔗 相关链接
-
-              - [获取 API Token](https://www.dmxapi.cn/token)
-              - [使用文档](https://cnb.cool/dmxapi/opencode_dmxapi)
-
-        # 4. 再上传附件到已创建的 Release
-        - name: 上传 Release 附件
-          image: cnbcool/attachments
-          settings:
-            attachments:
-              - "./opencode-dmxapi-${CNB_BRANCH}-*"
-            ttl: 0
-
-        # 5. 清理旧版本，只保留最近3个
-        - name: 清理旧版本
-          image: docker.cnb.cool/cnb/plugins/cnbcool/release-clean:latest
-          settings:
-            filter: "RECENT_N=3"
-            debug: false
