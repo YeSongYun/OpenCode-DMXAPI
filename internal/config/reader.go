@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 // ExistingConfig 表示已存在的配置信息
@@ -22,6 +23,7 @@ func NewReader() *Reader {
 
 // ReadExistingConfig 读取现有的 DMXAPI 配置
 // 如果配置不存在或读取失败，返回 nil
+// 支持新旧两种格式（单 dmxapi 或多 dmxapi-* provider）
 func (r *Reader) ReadExistingConfig() *ExistingConfig {
 	configPath, err := GetConfigPath()
 	if err != nil {
@@ -44,27 +46,34 @@ func (r *Reader) ReadExistingConfig() *ExistingConfig {
 		return nil
 	}
 
-	// 提取 dmxapi 提供者配置
-	dmxapi, exists := config.Provider["dmxapi"]
-	if !exists {
+	// 查找所有 dmxapi-* provider（兼容新旧格式）
+	var models []string
+	var url, apiKey string
+
+	for key, provider := range config.Provider {
+		if key == "dmxapi" || strings.HasPrefix(key, "dmxapi-") {
+			for modelName := range provider.Models {
+				models = append(models, modelName)
+			}
+			if url == "" {
+				url = provider.Options.BaseURL
+				apiKey = provider.Options.APIKey
+			}
+		}
+	}
+
+	if len(models) == 0 {
 		return nil
 	}
 
-	// 提取模型列表
-	var models []string
-	for modelName := range dmxapi.Models {
-		models = append(models, modelName)
-	}
-
-	// 提取 URL（移除 /v1 后缀）
-	url := dmxapi.Options.BaseURL
+	// 移除 /v1 后缀
 	if len(url) > 3 && url[len(url)-3:] == "/v1" {
 		url = url[:len(url)-3]
 	}
 
 	return &ExistingConfig{
 		URL:    url,
-		APIKey: dmxapi.Options.APIKey,
+		APIKey: apiKey,
 		Models: models,
 	}
 }

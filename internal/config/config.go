@@ -1,5 +1,47 @@
 package config
 
+import "strings"
+
+// ProviderType 定义 provider 类型
+type ProviderType int
+
+const (
+	ProviderAnthropic ProviderType = iota
+	ProviderGoogle
+	ProviderOpenAI
+)
+
+// ProviderInfo 存储 provider 元信息
+type ProviderInfo struct {
+	ID   string
+	NPM  string
+	Name string
+}
+
+// GetProviderInfo 根据类型返回 provider 信息
+func GetProviderInfo(pType ProviderType) ProviderInfo {
+	switch pType {
+	case ProviderAnthropic:
+		return ProviderInfo{ID: "dmxapi-anthropic", NPM: "@ai-sdk/anthropic", Name: "DMXAPI Claude"}
+	case ProviderGoogle:
+		return ProviderInfo{ID: "dmxapi-google", NPM: "@ai-sdk/google", Name: "DMXAPI Gemini"}
+	default:
+		return ProviderInfo{ID: "dmxapi-openai", NPM: "@ai-sdk/openai-compatible", Name: "DMXAPI OpenAI"}
+	}
+}
+
+// ClassifyModel 根据模型名称前缀判断 provider 类型
+func ClassifyModel(modelName string) ProviderType {
+	name := strings.ToLower(modelName)
+	if strings.HasPrefix(name, "claude") {
+		return ProviderAnthropic
+	}
+	if strings.HasPrefix(name, "gemini") {
+		return ProviderGoogle
+	}
+	return ProviderOpenAI
+}
+
 // OpenCodeConfig 表示 opencode.json 配置文件结构
 type OpenCodeConfig struct {
 	Schema   string              `json:"$schema"`
@@ -25,26 +67,36 @@ type Model struct {
 	Name string `json:"name"`
 }
 
-// NewDMXAPIConfig 创建 DMXAPI 配置
+// NewDMXAPIConfig 创建 DMXAPI 配置（基于模型名称路由）
 func NewDMXAPIConfig(url, apiKey string, models []string) *OpenCodeConfig {
-	modelMap := make(map[string]Model)
+	// 按 provider 类型分组模型
+	modelGroups := make(map[ProviderType]map[string]Model)
 	for _, m := range models {
-		modelMap[m] = Model{Name: m}
+		pType := ClassifyModel(m)
+		if modelGroups[pType] == nil {
+			modelGroups[pType] = make(map[string]Model)
+		}
+		modelGroups[pType][m] = Model{Name: m}
+	}
+
+	// 为每组模型创建对应的 provider
+	providers := make(map[string]Provider)
+	for pType, modelMap := range modelGroups {
+		info := GetProviderInfo(pType)
+		providers[info.ID] = Provider{
+			NPM:  info.NPM,
+			Name: info.Name,
+			Options: ProviderOptions{
+				BaseURL: url + "/v1",
+				APIKey:  apiKey,
+			},
+			Models: modelMap,
+		}
 	}
 
 	return &OpenCodeConfig{
-		Schema: "https://opencode.ai/config.json",
-		Provider: map[string]Provider{
-			"dmxapi": {
-				NPM:  "@ai-sdk/openai-compatible",
-				Name: "DMXAPI",
-				Options: ProviderOptions{
-					BaseURL: url + "/v1",
-					APIKey:  apiKey,
-				},
-				Models: modelMap,
-			},
-		},
+		Schema:   "https://opencode.ai/config.json",
+		Provider: providers,
 	}
 }
 
@@ -57,12 +109,20 @@ type AuthEntry struct {
 	Key  string `json:"key"`
 }
 
-// NewAuthConfig 创建认证配置
-func NewAuthConfig(providerID, apiKey string) AuthConfig {
-	return AuthConfig{
-		providerID: AuthEntry{
-			Type: "api",
-			Key:  apiKey,
-		},
+// NewAuthConfig 创建认证配置（支持多 provider）
+func NewAuthConfig(providerIDs []string, apiKey string) AuthConfig {
+	authConfig := make(AuthConfig)
+	for _, id := range providerIDs {
+		authConfig[id] = AuthEntry{Type: "api", Key: apiKey}
 	}
+	return authConfig
+}
+
+// GetProviderIDs 从配置中提取所有 provider ID
+func GetProviderIDs(config *OpenCodeConfig) []string {
+	var ids []string
+	for id := range config.Provider {
+		ids = append(ids, id)
+	}
+	return ids
 }

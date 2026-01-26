@@ -128,7 +128,9 @@ func runFullConfiguration(collector *input.Collector) {
 
 	// 步骤5: 写入认证配置
 	ui.PrintStep(5, "配置认证信息")
-	authMgr := auth.NewAuthManager("dmxapi", apiKey)
+	cfg := config.NewDMXAPIConfig(url, apiKey, models)
+	providerIDs := config.GetProviderIDs(cfg)
+	authMgr := auth.NewAuthManager(providerIDs, apiKey)
 	authPath, err := authMgr.Login()
 	if err != nil {
 		ui.PrintError(fmt.Sprintf("认证配置失败: %v", err))
@@ -140,7 +142,6 @@ func runFullConfiguration(collector *input.Collector) {
 
 	// 步骤6: 生成opencode.json配置文件
 	ui.PrintStep(6, "生成配置文件")
-	cfg := config.NewDMXAPIConfig(url, apiKey, models)
 	writer := config.NewWriter()
 	configPath, err := writer.WriteConfig(cfg)
 	if err != nil {
@@ -194,7 +195,9 @@ func runModelOnlyConfiguration(collector *input.Collector, existing *config.Exis
 
 	// 步骤2: 更新认证配置（保持不变，但确保文件存在）
 	ui.PrintStep(2, "更新认证信息")
-	authMgr := auth.NewAuthManager("dmxapi", existing.APIKey)
+	cfg := config.NewDMXAPIConfig(existing.URL, existing.APIKey, models)
+	providerIDs := config.GetProviderIDs(cfg)
+	authMgr := auth.NewAuthManager(providerIDs, existing.APIKey)
 	authPath, err := authMgr.Login()
 	if err != nil {
 		ui.PrintError(fmt.Sprintf("认证配置失败: %v", err))
@@ -206,7 +209,6 @@ func runModelOnlyConfiguration(collector *input.Collector, existing *config.Exis
 
 	// 步骤3: 生成opencode.json配置文件（使用现有URL和APIKey，新模型）
 	ui.PrintStep(3, "生成配置文件")
-	cfg := config.NewDMXAPIConfig(existing.URL, existing.APIKey, models)
 	writer := config.NewWriter()
 	configPath, err := writer.WriteConfig(cfg)
 	if err != nil {
