@@ -44,7 +44,6 @@ func ClassifyModel(modelName string) ProviderType {
 
 // OpenCodeConfig 表示 opencode.json 配置文件结构
 type OpenCodeConfig struct {
-	Schema   string              `json:"$schema"`
 	Provider map[string]Provider `json:"provider"`
 }
 
@@ -95,7 +94,6 @@ func NewDMXAPIConfig(url, apiKey string, models []string) *OpenCodeConfig {
 	}
 
 	return &OpenCodeConfig{
-		Schema:   "https://opencode.ai/config.json",
 		Provider: providers,
 	}
 }

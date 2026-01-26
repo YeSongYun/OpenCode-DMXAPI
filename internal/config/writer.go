@@ -157,8 +157,5 @@ func (w *Writer) mergeConfig(existing, new *OpenCodeConfig) *OpenCodeConfig {
 		existing.Provider[k] = v
 	}
 
-	// 使用新配置的schema
-	existing.Schema = new.Schema
-
 	return existing
 }
