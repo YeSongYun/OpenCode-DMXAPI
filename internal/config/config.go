@@ -9,6 +9,7 @@ const (
 	ProviderAnthropic ProviderType = iota
 	ProviderGoogle
 	ProviderOpenAI
+	ProviderOpenAIResponses
 )
 
 // ProviderInfo 存储 provider 元信息
@@ -25,6 +26,8 @@ func GetProviderInfo(pType ProviderType) ProviderInfo {
 		return ProviderInfo{ID: "dmxapi-anthropic", NPM: "@ai-sdk/anthropic", Name: "DMXAPI Claude"}
 	case ProviderGoogle:
 		return ProviderInfo{ID: "dmxapi-google", NPM: "@ai-sdk/google", Name: "DMXAPI Gemini"}
+	case ProviderOpenAIResponses:
+		return ProviderInfo{ID: "dmxapi-openai-responses", NPM: "@ai-sdk/openai", Name: "DMXAPI OpenAI Responses"}
 	default:
 		return ProviderInfo{ID: "dmxapi-openai", NPM: "@ai-sdk/openai-compatible", Name: "DMXAPI OpenAI"}
 	}
@@ -38,6 +41,9 @@ func ClassifyModel(modelName string) ProviderType {
 	}
 	if strings.HasPrefix(name, "gemini") {
 		return ProviderGoogle
+	}
+	if strings.HasPrefix(name, "gpt-5") {
+		return ProviderOpenAIResponses
 	}
 	return ProviderOpenAI
 }

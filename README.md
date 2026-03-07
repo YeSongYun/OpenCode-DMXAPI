@@ -53,6 +53,7 @@
 |----------|----------|-----|------|
 | `claude*` | dmxapi-anthropic | @ai-sdk/anthropic | claude-opus-4-5-20251101, claude-sonnet-4-20250514 |
 | `gemini*` | dmxapi-google | @ai-sdk/google | gemini-2.5-pro, gemini-2.5-flash |
+| `gpt-5*` | dmxapi-openai-responses | @ai-sdk/openai | gpt-5, gpt-5.2, gpt-5-mini, gpt-5-turbo |
 | 其他 | dmxapi-openai | @ai-sdk/openai-compatible | DeepSeek-V3, gpt-4o, o1 |
 
 **示例：** 配置 `claude-opus-4-5-20251101,gemini-2.5-pro,DeepSeek-V3` 将自动创建 3 个 Provider。
