@@ -12,6 +12,19 @@ import (
 	"dmxapi-config/internal/ui"
 )
 
+func init() {
+	// 在旧版 Windows CMD（不支持 ANSI）中提示切换到 UTF-8 代码页
+	// 避免中文和 Unicode 字符（如 ╔═║✓）显示为乱码
+	if ui.IsLegacyWindowsCMD() {
+		fmt.Println("提示: 检测到旧版 Windows CMD，如出现中文或字符乱码，请先运行:")
+		fmt.Println("      chcp 65001")
+		fmt.Println()
+		// 同时提示推荐使用 Windows Terminal 以获得最佳显示效果
+		fmt.Println("建议: 使用 Windows Terminal 可获得完整的颜色和字符显示支持。")
+		fmt.Println()
+	}
+}
+
 // waitForExit 等待用户按任意键退出
 func waitForExit() {
 	fmt.Println()

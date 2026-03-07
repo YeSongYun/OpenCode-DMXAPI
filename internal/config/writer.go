@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -82,8 +83,12 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 	}
 
 	// 写入文件（使用更严格的权限）
+	// 注意：Windows 会忽略 Unix 权限位（0600），auth.json 在 Windows 上不受文件系统权限保护
 	if err := os.WriteFile(authPath, data, 0600); err != nil {
 		return "", fmt.Errorf("写入认证文件失败: %w", err)
+	}
+	if runtime.GOOS == "windows" {
+		fmt.Println("注意: Windows 不支持 Unix 文件权限，请确保 auth.json 所在目录访问受限。")
 	}
 
 	return authPath, nil

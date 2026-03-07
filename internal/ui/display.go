@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 )
 
@@ -17,9 +18,32 @@ const (
 
 // 判断是否支持颜色输出
 func supportsColor() bool {
-	// Windows CMD 默认不支持ANSI颜色，但Windows Terminal和PowerShell Core支持
-	// 这里简化处理，始终使用颜色
+	// 遵循 NO_COLOR 标准 (https://no-color.org/)：设置此变量则禁用颜色
+	if os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	if runtime.GOOS == "windows" {
+		// Windows Terminal 启动时注入 WT_SESSION，是支持 ANSI 最可靠的标志
+		if os.Getenv("WT_SESSION") != "" {
+			return true
+		}
+		// ANSICON 终端模拟器
+		if os.Getenv("ANSICON") != "" {
+			return true
+		}
+		// ConEmu / Cmder
+		if os.Getenv("ConEmuANSI") == "ON" {
+			return true
+		}
+		// 旧版 CMD：不支持 ANSI
+		return false
+	}
 	return true
+}
+
+// IsLegacyWindowsCMD 判断当前是否运行在不支持 ANSI 的旧版 Windows CMD 中
+func IsLegacyWindowsCMD() bool {
+	return runtime.GOOS == "windows" && !supportsColor()
 }
 
 // colorize 添加颜色
