@@ -68,27 +68,27 @@ func PrintBanner() {
 
 // PrintStep 打印步骤信息
 func PrintStep(step int, message string) {
-	fmt.Printf("%s[步骤 %d]%s %s\n", ColorBlue, step, ColorReset, message)
+	fmt.Printf("%s %s\n", colorize(ColorBlue, fmt.Sprintf("[步骤 %d]", step)), message)
 }
 
 // PrintSuccess 打印成功信息
 func PrintSuccess(message string) {
-	fmt.Printf("%s✓ %s%s\n", ColorGreen, message, ColorReset)
+	fmt.Println(colorize(ColorGreen, "✓ "+message))
 }
 
 // PrintError 打印错误信息
 func PrintError(message string) {
-	fmt.Printf("%s✗ %s%s\n", ColorRed, message, ColorReset)
+	fmt.Println(colorize(ColorRed, "✗ "+message))
 }
 
 // PrintInfo 打印提示信息
 func PrintInfo(message string) {
-	fmt.Printf("%s→ %s%s\n", ColorYellow, message, ColorReset)
+	fmt.Println(colorize(ColorYellow, "→ "+message))
 }
 
 // PrintWarning 打印警告信息
 func PrintWarning(message string) {
-	fmt.Printf("%s⚠ %s%s\n", ColorYellow, message, ColorReset)
+	fmt.Println(colorize(ColorYellow, "⚠ "+message))
 }
 
 // PrintDivider 打印分隔线

@@ -73,34 +73,39 @@ func main() {
 	waitForExit()
 }
 
+// collectWithRetry 通用重试包装：循环调用 collect 直到 validate 通过
+func collectWithRetry(collect func() (string, error), validate func(string) error) (string, error) {
+	for {
+		val, err := collect()
+		if err != nil {
+			return "", err
+		}
+		if err := validate(val); err != nil {
+			ui.PrintWarning(fmt.Sprintf("输入无效：%v，请重新输入。", err))
+			continue
+		}
+		return val, nil
+	}
+}
+
 // runFullConfiguration 运行完整配置流程
 func runFullConfiguration(collector *input.Collector) {
-	// 步骤1: 收集URL
+	// 步骤1: 收集URL（验证失败时提示重试）
 	ui.PrintStep(1, "配置 DMXAPI URL")
-	url, err := collector.CollectURL()
+	url, err := collectWithRetry(collector.CollectURL, input.ValidateURL)
 	if err != nil {
 		ui.PrintError(fmt.Sprintf("读取URL失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	if err := input.ValidateURL(url); err != nil {
-		ui.PrintError(fmt.Sprintf("URL格式无效: %v", err))
 		waitForExit()
 		os.Exit(1)
 	}
 	ui.PrintSuccess(fmt.Sprintf("URL 已设置: %s", url))
 	fmt.Println()
 
-	// 步骤2: 收集API Key
+	// 步骤2: 收集API Key（验证失败时提示重试）
 	ui.PrintStep(2, "配置 API Key")
-	apiKey, err := collector.CollectAPIKey()
+	apiKey, err := collectWithRetry(collector.CollectAPIKey, input.ValidateAPIKey)
 	if err != nil {
 		ui.PrintError(fmt.Sprintf("读取API Key失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	if err := input.ValidateAPIKey(apiKey); err != nil {
-		ui.PrintError(fmt.Sprintf("API Key无效: %v", err))
 		waitForExit()
 		os.Exit(1)
 	}
@@ -119,18 +124,22 @@ func runFullConfiguration(collector *input.Collector) {
 	ui.PrintSuccess("API 连接测试成功！")
 	fmt.Println()
 
-	// 步骤4: 收集模型名称
+	// 步骤4: 收集模型名称（验证失败时提示重试）
 	ui.PrintStep(4, "配置模型")
-	models, err := collector.CollectModels()
-	if err != nil {
-		ui.PrintError(fmt.Sprintf("读取模型失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	if err := input.ValidateModels(models); err != nil {
-		ui.PrintError(fmt.Sprintf("模型配置无效: %v", err))
-		waitForExit()
-		os.Exit(1)
+	var models []string
+	for {
+		var modelsErr error
+		models, modelsErr = collector.CollectModels()
+		if modelsErr != nil {
+			ui.PrintError(fmt.Sprintf("读取模型失败: %v", modelsErr))
+			waitForExit()
+			os.Exit(1)
+		}
+		if err := input.ValidateModels(models); err != nil {
+			ui.PrintWarning(fmt.Sprintf("输入无效：%v，请重新输入。", err))
+			continue
+		}
+		break
 	}
 	ui.PrintSuccess(fmt.Sprintf("已添加 %d 个模型: %v", len(models), models))
 	fmt.Println()
@@ -186,18 +195,22 @@ func runModelOnlyConfiguration(collector *input.Collector, existing *config.Exis
 	// 显示当前配置信息
 	ui.PrintExistingConfigInfo(existing.URL, config.MaskAPIKey(existing.APIKey), existing.Models)
 
-	// 步骤1: 收集新模型名称
+	// 步骤1: 收集新模型名称（验证失败时提示重试）
 	ui.PrintStep(1, "配置模型")
-	models, err := collector.CollectModels()
-	if err != nil {
-		ui.PrintError(fmt.Sprintf("读取模型失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	if err := input.ValidateModels(models); err != nil {
-		ui.PrintError(fmt.Sprintf("模型配置无效: %v", err))
-		waitForExit()
-		os.Exit(1)
+	var models []string
+	for {
+		var modelsErr error
+		models, modelsErr = collector.CollectModels()
+		if modelsErr != nil {
+			ui.PrintError(fmt.Sprintf("读取模型失败: %v", modelsErr))
+			waitForExit()
+			os.Exit(1)
+		}
+		if err := input.ValidateModels(models); err != nil {
+			ui.PrintWarning(fmt.Sprintf("输入无效：%v，请重新输入。", err))
+			continue
+		}
+		break
 	}
 	ui.PrintSuccess(fmt.Sprintf("已添加 %d 个模型: %v", len(models), models))
 	fmt.Println()

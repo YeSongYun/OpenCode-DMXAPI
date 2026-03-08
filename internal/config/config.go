@@ -1,6 +1,13 @@
 package config
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+// o1o3o4Pattern 匹配 OpenAI o1/o3/o4 系列推理模型：
+// 以 "o1"、"o3" 或 "o4" 开头，后跟 "-" 或字符串结尾（避免误匹配含这些字母的其他模型名）
+var o1o3o4Pattern = regexp.MustCompile(`^o[134](-|$)`)
 
 // ProviderType 定义 provider 类型
 type ProviderType int
@@ -42,7 +49,8 @@ func ClassifyModel(modelName string) ProviderType {
 	if strings.HasPrefix(name, "gemini") {
 		return ProviderGoogle
 	}
-	if strings.HasPrefix(name, "gpt-5") {
+	// gpt-5 系列及 o1/o3/o4 系列推理模型均使用 responses 格式（@ai-sdk/openai）
+	if strings.HasPrefix(name, "gpt-5") || o1o3o4Pattern.MatchString(name) {
 		return ProviderOpenAIResponses
 	}
 	return ProviderOpenAI

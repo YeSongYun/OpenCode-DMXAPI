@@ -135,26 +135,3 @@ func (c *Collector) CollectModels() ([]string, error) {
 	return models, nil
 }
 
-// CollectAll 收集所有必要的输入
-func (c *Collector) CollectAll() (*UserInput, error) {
-	url, err := c.CollectURL()
-	if err != nil {
-		return nil, err
-	}
-
-	apiKey, err := c.CollectAPIKey()
-	if err != nil {
-		return nil, err
-	}
-
-	models, err := c.CollectModels()
-	if err != nil {
-		return nil, err
-	}
-
-	return &UserInput{
-		URL:    url,
-		APIKey: apiKey,
-		Models: models,
-	}, nil
-}
