@@ -1,17 +1,23 @@
 jihua
 .claude/settings.local.json
-dmxapi-config/dmxapi-config.exe
 .claude/settings.json
+
+# 构建产物：各平台二进制文件
+*.exe
+dmxapi-config
+dmxapi-config-linux
+dmxapi-config-linux-*
+dmxapi-config-macos-arm64
+dmxapi-config-macos-amd64
+dmxapi-config-windows.exe
+opencode-dmxapi-*
+
+# 子目录构建产物
+dmxapi-config/dmxapi-config.exe
 dmxapi-config/dmxapi-config-linux
-.gitignore
 dmxapi-config/dmxapi-config-macos-amd64
 dmxapi-config/dmxapi-config-macos-arm64
 dmxapi-config/dmxapi-config-windows.exe
 
-# 根目录二进制文件
-dmxapi-config-linux
-dmxapi-config-windows.exe
-dmxapi-config-macos-arm64
-dmxapi-config-macos-amd64
-dmxapi-config.exe
+# Windows 特殊文件
 nul
