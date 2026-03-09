@@ -6,6 +6,19 @@ import (
 	"runtime"
 )
 
+// Version 版本号常量，方便后续修改
+const Version = "1.0.0"
+
+// dmxapiASCIIArt DMXAPI 的 block 字符 ASCII Art
+const dmxapiASCIIArt = `
+ ██████╗ ███╗   ███╗██╗  ██╗ █████╗ ██████╗ ██╗
+ ██╔══██╗████╗ ████║╚██╗██╔╝██╔══██╗██╔══██╗██║
+ ██║  ██║██╔████╔██║ ╚███╔╝ ███████║██████╔╝██║
+ ██║  ██║██║╚██╔╝██║ ██╔██╗ ██╔══██║██╔═══╝ ██║
+ ██████╔╝██║ ╚═╝ ██║██╔╝ ██╗██║  ██║██║     ██║
+ ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝
+`
+
 // ANSI颜色代码
 const (
 	ColorReset  = "\033[0m"
@@ -58,9 +71,9 @@ func colorize(color, text string) string {
 
 // PrintBanner 打印程序横幅
 func PrintBanner() {
-	fmt.Println()
-	fmt.Printf("  %s DMXAPI OpenCode 配置工具\n", colorize(ColorBold+ColorCyan, "⚡"))
-	fmt.Printf("  %s\n", colorize(ColorDim, "快速配置 OpenCode 使用 DMXAPI 服务"))
+	fmt.Print(colorize(ColorBold+ColorCyan, dmxapiASCIIArt))
+	fmt.Printf(" %s · %s\n", colorize(ColorBold, "OpenCode 配置工具"), colorize(ColorCyan, "让 AI 触手可及"))
+	fmt.Printf(" %s\n", colorize(ColorDim, fmt.Sprintf("v%s / %s/%s", Version, runtime.GOOS, runtime.GOARCH)))
 	fmt.Println()
 }
 
