@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"dmxapi-config/internal/config"
@@ -217,8 +218,8 @@ func (t *Tester) testGoogleConnection(model string) error {
 		return fmt.Errorf("序列化请求失败: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/v1beta/models/%s:generateContent", t.baseURL, model)
-	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	reqURL := fmt.Sprintf("%s/v1beta/models/%s:generateContent", t.baseURL, url.PathEscape(model))
+	httpReq, err := http.NewRequest("POST", reqURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %w", err)
 	}

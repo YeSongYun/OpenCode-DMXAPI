@@ -161,7 +161,7 @@ func runFullConfiguration(collector *input.Collector) {
 	ui.PrintComplete()
 
 	fmt.Println("  配置摘要:")
-	fmt.Printf("    URL     %s\n", strings.TrimSuffix(url, "/v1"))
+	fmt.Printf("    URL     %s\n", config.NormalizeBaseURL(url))
 	fmt.Printf("    模型    %s\n", strings.Join(models, ", "))
 	fmt.Printf("    配置    %s\n", configPath)
 	fmt.Printf("    认证    %s\n", authPath)
@@ -218,7 +218,7 @@ func runModelOnlyConfiguration(collector *input.Collector, existing *config.Exis
 	ui.PrintComplete()
 
 	fmt.Println("  配置摘要:")
-	fmt.Printf("    URL     %s\n", strings.TrimSuffix(existing.URL, "/v1"))
+	fmt.Printf("    URL     %s\n", config.NormalizeBaseURL(existing.URL))
 	fmt.Printf("    模型    %s\n", strings.Join(models, ", "))
 	fmt.Printf("    配置    %s\n", configPath)
 	fmt.Printf("    认证    %s\n", authPath)

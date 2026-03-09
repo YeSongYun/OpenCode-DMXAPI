@@ -66,21 +66,13 @@ func (r *Reader) ReadExistingConfig() *ExistingConfig {
 		return nil
 	}
 
-	// 移除 /v1 后缀
-	if len(url) > 3 && url[len(url)-3:] == "/v1" {
-		url = url[:len(url)-3]
-	}
+	url = NormalizeBaseURL(url)
 
 	return &ExistingConfig{
 		URL:    url,
 		APIKey: apiKey,
 		Models: models,
 	}
-}
-
-// HasExistingConfig 检查是否存在现有配置
-func (r *Reader) HasExistingConfig() bool {
-	return r.ReadExistingConfig() != nil
 }
 
 // MaskAPIKey 遮蔽 API Key，只显示前4位和后4位

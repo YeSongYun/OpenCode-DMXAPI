@@ -55,16 +55,3 @@ func EnsureDir(filePath string) error {
 	return nil
 }
 
-// GetOS 返回当前操作系统名称
-func GetOS() string {
-	switch runtime.GOOS {
-	case "windows":
-		return "Windows"
-	case "darwin":
-		return "macOS"
-	case "linux":
-		return "Linux"
-	default:
-		return runtime.GOOS
-	}
-}

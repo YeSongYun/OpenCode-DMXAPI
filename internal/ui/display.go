@@ -197,11 +197,6 @@ func PrintDivider() {
 	fmt.Println()
 }
 
-// PrintSystemInfo 打印系统信息
-func PrintSystemInfo() {
-	fmt.Printf("  系统: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-}
-
 // PrintComplete 打印完成信息
 func PrintComplete() {
 	fmt.Println()
