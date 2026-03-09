@@ -169,9 +169,18 @@ type GeminiPart struct {
 	Text string `json:"text"`
 }
 
+// GeminiCandidate Gemini 候选结果
+type GeminiCandidate struct {
+	Content struct {
+		Parts []struct {
+			Text string `json:"text"`
+		} `json:"parts"`
+	} `json:"content"`
+}
+
 // GeminiResponse Google Generative Language API 响应结构
 type GeminiResponse struct {
-	Candidates []struct{} `json:"candidates"`
+	Candidates []GeminiCandidate `json:"candidates"`
 	Error      *struct {
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
@@ -183,7 +192,17 @@ type OpenAIResponsesRequest struct {
 	Input string `json:"input"`
 }
 
+// OpenAIResponsesResponse OpenAI Responses API 响应结构
+type OpenAIResponsesResponse struct {
+	Output []struct {
+		Type string `json:"type"`
+	} `json:"output"`
+	Error *APIError `json:"error,omitempty"`
+}
+
 // testGoogleConnection 使用 Google Generative Language API 测试连接
+// URL 格式与 opencode 配置中 @ai-sdk/google baseURL(url+"/v1") 一致：
+// {baseURL}/v1/models/{model}:generateContent
 func (t *Tester) testGoogleConnection(model string) error {
 	req := GeminiRequest{
 		Contents: []GeminiContent{
@@ -196,13 +215,14 @@ func (t *Tester) testGoogleConnection(model string) error {
 		return fmt.Errorf("序列化请求失败: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/v1beta/models/%s:generateContent?key=%s", t.baseURL, model, t.apiKey)
+	url := fmt.Sprintf("%s/v1/models/%s:generateContent", t.baseURL, model)
 	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
 
 	resp, err := t.client.Do(httpReq)
 	if err != nil {
@@ -262,9 +282,26 @@ func (t *Tester) testOpenAIResponsesConnection(model string) error {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("读取响应失败: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		var respErr OpenAIResponsesResponse
+		if json.Unmarshal(body, &respErr) == nil && respErr.Error != nil {
+			return fmt.Errorf("API错误 (%d): %s", resp.StatusCode, respErr.Error.Message)
+		}
 		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+	}
+
+	var responsesResp OpenAIResponsesResponse
+	if err := json.Unmarshal(body, &responsesResp); err != nil {
+		return fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	if len(responsesResp.Output) == 0 {
+		return fmt.Errorf("API响应无效：没有返回任何输出")
 	}
 
 	return nil

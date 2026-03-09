@@ -62,19 +62,3 @@ func ValidateModels(models []string) error {
 	return nil
 }
 
-// ValidateInput 验证所有输入
-func ValidateInput(input *UserInput) error {
-	if err := ValidateURL(input.URL); err != nil {
-		return fmt.Errorf("URL验证失败: %w", err)
-	}
-
-	if err := ValidateAPIKey(input.APIKey); err != nil {
-		return fmt.Errorf("API Key验证失败: %w", err)
-	}
-
-	if err := ValidateModels(input.Models); err != nil {
-		return fmt.Errorf("模型验证失败: %w", err)
-	}
-
-	return nil
-}

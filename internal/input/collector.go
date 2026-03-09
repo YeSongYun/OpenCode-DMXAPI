@@ -15,13 +15,6 @@ const (
 	ConfigModeModelOnly ConfigMode = 2 // 仅配置模型
 )
 
-// UserInput 用户输入的配置信息
-type UserInput struct {
-	URL    string   // API URL (如 https://www.dmxapi.cn)
-	APIKey string   // API密钥
-	Models []string // 模型名称列表
-}
-
 // Collector 用户输入收集器
 type Collector struct {
 	reader *bufio.Reader

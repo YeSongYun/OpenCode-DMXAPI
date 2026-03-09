@@ -39,8 +39,12 @@ func selectMenuImpl(prompt string, options []string) (int, error) {
 
 	buf := make([]byte, 1)
 	for {
-		if _, err := os.Stdin.Read(buf); err != nil {
+		n, err := os.Stdin.Read(buf)
+		if err != nil {
 			return 0, fmt.Errorf("读取输入失败: %w", err)
+		}
+		if n == 0 {
+			continue // VTIME 超时，未收到字节，继续等待
 		}
 
 		switch buf[0] {
