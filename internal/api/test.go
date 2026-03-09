@@ -63,11 +63,11 @@ func NewTester(baseURL, apiKey string) *Tester {
 }
 
 // TestConnection 测试API连接
-// 使用 claude-haiku-4-5 模型发送一个简单请求（轻量级模型，权限要求低、调用成本低）
-func (t *Tester) TestConnection() error {
+// 使用用户指定的 model 发送一个简单请求，验证 API Key 和 URL 是否有效
+func (t *Tester) TestConnection(model string) error {
 	// 构造请求
 	req := ChatRequest{
-		Model: "claude-haiku-4-5",
+		Model: model,
 		Messages: []Message{
 			{
 				Role:    "user",

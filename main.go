@@ -112,20 +112,8 @@ func runFullConfiguration(collector *input.Collector) {
 	ui.PrintSuccess("API Key 已设置")
 	fmt.Println()
 
-	// 步骤3: 测试API连接
-	ui.PrintStep(3, "测试 API 连接")
-	ui.PrintInfo("正在测试连接...")
-	tester := api.NewTester(url, apiKey)
-	if err := tester.TestConnection(); err != nil {
-		ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	ui.PrintSuccess("API 连接测试成功！")
-	fmt.Println()
-
-	// 步骤4: 收集模型名称（验证失败时提示重试）
-	ui.PrintStep(4, "配置模型")
+	// 步骤3: 收集模型名称（验证失败时提示重试）
+	ui.PrintStep(3, "配置模型")
 	var models []string
 	for {
 		var modelsErr error
@@ -142,6 +130,18 @@ func runFullConfiguration(collector *input.Collector) {
 		break
 	}
 	ui.PrintSuccess(fmt.Sprintf("已添加 %d 个模型: %v", len(models), models))
+	fmt.Println()
+
+	// 步骤4: 测试API连接（使用用户配置的第一个模型）
+	ui.PrintStep(4, "测试 API 连接")
+	ui.PrintInfo("正在测试连接...")
+	tester := api.NewTester(url, apiKey)
+	if err := tester.TestConnection(models[0]); err != nil {
+		ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", err))
+		waitForExit()
+		os.Exit(1)
+	}
+	ui.PrintSuccess("API 连接测试成功！")
 	fmt.Println()
 
 	ui.PrintDivider()
