@@ -80,12 +80,12 @@ $:
         - name: 编译 macOS AMD64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-darwin-amd64
+            - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-macos-amd64
 
         - name: 编译 macOS ARM64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
+            - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-macos-arm64
 
         # 3. 先创建 Release（必须在上传附件之前）
         - name: 创建 Release
@@ -110,8 +110,8 @@ $:
               | Windows | x64 | `opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe` |
               | Linux | x64 | `opencode-dmxapi-${CNB_BRANCH}-linux-amd64` |
               | Linux | ARM64 | `opencode-dmxapi-${CNB_BRANCH}-linux-arm64` |
-              | macOS | Intel | `opencode-dmxapi-${CNB_BRANCH}-darwin-amd64` |
-              | macOS | Apple Silicon | `opencode-dmxapi-${CNB_BRANCH}-darwin-arm64` |
+              | macOS | Intel | `opencode-dmxapi-${CNB_BRANCH}-macos-amd64` |
+              | macOS | Apple Silicon | `opencode-dmxapi-${CNB_BRANCH}-macos-arm64` |
 
               ---
 
@@ -123,19 +123,32 @@ $:
               .\opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
               ```
 
-              #### Linux
+              #### Linux (x64)
               ```bash
-              # 下载并添加执行权限
               chmod +x opencode-dmxapi-${CNB_BRANCH}-linux-amd64
               ./opencode-dmxapi-${CNB_BRANCH}-linux-amd64
               ```
 
-              #### macOS
+              #### Linux (ARM64)
               ```bash
-              # 下载并添加执行权限
-              chmod +x opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
-              # 首次运行可能需要在"系统设置 > 隐私与安全性"中允许
-              ./opencode-dmxapi-${CNB_BRANCH}-darwin-arm64
+              chmod +x opencode-dmxapi-${CNB_BRANCH}-linux-arm64
+              ./opencode-dmxapi-${CNB_BRANCH}-linux-arm64
+              ```
+
+              #### macOS (Intel)
+              ```bash
+              chmod +x opencode-dmxapi-${CNB_BRANCH}-macos-amd64
+              # 移除隔离属性（首次运行需要）
+              xattr -dr com.apple.quarantine opencode-dmxapi-${CNB_BRANCH}-macos-amd64
+              ./opencode-dmxapi-${CNB_BRANCH}-macos-amd64
+              ```
+
+              #### macOS (Apple Silicon)
+              ```bash
+              chmod +x opencode-dmxapi-${CNB_BRANCH}-macos-arm64
+              # 移除隔离属性（首次运行需要）
+              xattr -dr com.apple.quarantine opencode-dmxapi-${CNB_BRANCH}-macos-arm64
+              ./opencode-dmxapi-${CNB_BRANCH}-macos-arm64
               ```
 
               ---

@@ -15,24 +15,66 @@
 - **配置合并** - 智能合并现有配置，保留自定义设置
 - **跨平台支持** - Windows / macOS / Linux
 
+## 系统要求
+
+| 平台 | 要求 |
+|------|------|
+| Windows | Windows 10 x64 及以上 |
+| macOS | macOS 11 (Big Sur) 及以上，支持 Intel 与 Apple Silicon |
+| Linux | glibc 2.17+，支持 x64 与 ARM64 |
+
+> **注意**：macOS 用户首次运行未签名二进制需执行 `xattr -dr com.apple.quarantine <文件名>` 移除 Gatekeeper 隔离属性。
+
 ## 下载安装
 
 | 平台 | 文件名 | 架构 |
 |------|--------|------|
-| Windows | `dmxapi-config-windows.exe` | x64 |
-| macOS (Intel) | `dmxapi-config-macos-amd64` | x64 |
-| macOS (Apple Silicon) | `dmxapi-config-macos-arm64` | ARM64 |
-| Linux | `dmxapi-config-linux` | x64 |
+| Windows | `opencode-dmxapi-<版本>-windows-amd64.exe` | x64 |
+| macOS (Intel) | `opencode-dmxapi-<版本>-macos-amd64` | x64 |
+| macOS (Apple Silicon) | `opencode-dmxapi-<版本>-macos-arm64` | ARM64 |
+| Linux (x64) | `opencode-dmxapi-<版本>-linux-amd64` | x64 |
+| Linux (ARM64) | `opencode-dmxapi-<版本>-linux-arm64` | ARM64 |
 
 ## 快速开始
 
-1. 下载对应平台的可执行文件
-2. 运行程序
-3. 选择配置模式（如存在现有配置）
-4. 按提示输入信息：
-   - **DMXAPI URL**（默认: https://www.dmxapi.cn）
-   - **API Key**（从 https://www.dmxapi.cn/token 获取）
-   - **模型名称**（多个用逗号分隔）
+### Windows
+
+```powershell
+# 下载后直接运行
+.\opencode-dmxapi-<版本>-windows-amd64.exe
+```
+
+### macOS (Intel)
+
+```bash
+chmod +x opencode-dmxapi-<版本>-macos-amd64
+# 移除 Gatekeeper 隔离属性（首次运行需要）
+xattr -dr com.apple.quarantine opencode-dmxapi-<版本>-macos-amd64
+./opencode-dmxapi-<版本>-macos-amd64
+```
+
+### macOS (Apple Silicon)
+
+```bash
+chmod +x opencode-dmxapi-<版本>-macos-arm64
+# 移除 Gatekeeper 隔离属性（首次运行需要）
+xattr -dr com.apple.quarantine opencode-dmxapi-<版本>-macos-arm64
+./opencode-dmxapi-<版本>-macos-arm64
+```
+
+### Linux
+
+```bash
+chmod +x opencode-dmxapi-<版本>-linux-amd64
+./opencode-dmxapi-<版本>-linux-amd64
+# ARM64 用户将 amd64 替换为 arm64
+```
+
+运行后按提示操作：
+1. 选择配置模式（如存在现有配置）
+2. 输入 **DMXAPI URL**（默认: https://www.dmxapi.cn）
+3. 输入 **API Key**（从 https://www.dmxapi.cn/token 获取）
+4. 输入 **模型名称**（多个用逗号分隔）
 5. 程序自动测试连接并生成配置文件
 6. 运行 `opencode` 启动程序
 
@@ -153,6 +195,35 @@ GOOS=darwin GOARCH=arm64 go build -o dmxapi-config-macos-arm64 .
 # Linux
 GOOS=linux GOARCH=amd64 go build -o dmxapi-config-linux .
 ```
+
+## 常见问题
+
+### macOS 提示"无法验证开发者"
+
+macOS Gatekeeper 会阻止运行未经 Apple 公证的二进制文件。解决方法：
+
+```bash
+# 方法一：命令行移除隔离属性（推荐）
+xattr -dr com.apple.quarantine opencode-dmxapi-<版本>-macos-arm64
+
+# 方法二：系统设置手动允许
+# 前往"系统设置 > 隐私与安全性"，找到被阻止的程序，点击"仍要打开"
+```
+
+### API Key 无效或连接失败
+
+- 确认 API Key 以 `sk-` 开头，从 https://www.dmxapi.cn/token 获取
+- 检查网络是否能访问 https://www.dmxapi.cn
+- 如使用自定义 URL，确保末尾不含多余斜杠
+
+### 配置文件在哪里？
+
+| 文件 | Windows | macOS / Linux |
+|------|---------|---------------|
+| `opencode.json` | `C:\Users\<用户>\.config\opencode\opencode.json` | `~/.config/opencode/opencode.json` |
+| `auth.json` | `C:\Users\<用户>\.local\share\opencode\auth.json` | `~/.local/share/opencode/auth.json` |
+
+备份文件保存在同目录下，后缀为 `.bak.<时间戳>`。
 
 ## 相关链接
 

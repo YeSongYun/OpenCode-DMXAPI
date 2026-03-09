@@ -46,10 +46,10 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-linux-arm64
 
           # macOS AMD64
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-darwin-amd64
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-macos-amd64
 
           # macOS ARM64
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-darwin-arm64
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${VERSION}-macos-arm64
 
       # 创建 Release
       - name: Create Release
@@ -74,8 +74,8 @@ jobs:
             | Windows | x64 | `opencode-dmxapi-${{ github.ref_name }}-windows-amd64.exe` |
             | Linux | x64 | `opencode-dmxapi-${{ github.ref_name }}-linux-amd64` |
             | Linux | ARM64 | `opencode-dmxapi-${{ github.ref_name }}-linux-arm64` |
-            | macOS | Intel | `opencode-dmxapi-${{ github.ref_name }}-darwin-amd64` |
-            | macOS | Apple Silicon | `opencode-dmxapi-${{ github.ref_name }}-darwin-arm64` |
+            | macOS | Intel | `opencode-dmxapi-${{ github.ref_name }}-macos-amd64` |
+            | macOS | Apple Silicon | `opencode-dmxapi-${{ github.ref_name }}-macos-arm64` |
 
             ---
 
@@ -86,16 +86,32 @@ jobs:
             .\opencode-dmxapi-${{ github.ref_name }}-windows-amd64.exe
             ```
 
-            #### Linux
+            #### Linux (x64)
             ```bash
             chmod +x opencode-dmxapi-${{ github.ref_name }}-linux-amd64
             ./opencode-dmxapi-${{ github.ref_name }}-linux-amd64
             ```
 
-            #### macOS
+            #### Linux (ARM64)
             ```bash
-            chmod +x opencode-dmxapi-${{ github.ref_name }}-darwin-arm64
-            ./opencode-dmxapi-${{ github.ref_name }}-darwin-arm64
+            chmod +x opencode-dmxapi-${{ github.ref_name }}-linux-arm64
+            ./opencode-dmxapi-${{ github.ref_name }}-linux-arm64
+            ```
+
+            #### macOS (Intel)
+            ```bash
+            chmod +x opencode-dmxapi-${{ github.ref_name }}-macos-amd64
+            # 移除隔离属性（首次运行需要）
+            xattr -dr com.apple.quarantine opencode-dmxapi-${{ github.ref_name }}-macos-amd64
+            ./opencode-dmxapi-${{ github.ref_name }}-macos-amd64
+            ```
+
+            #### macOS (Apple Silicon)
+            ```bash
+            chmod +x opencode-dmxapi-${{ github.ref_name }}-macos-arm64
+            # 移除隔离属性（首次运行需要）
+            xattr -dr com.apple.quarantine opencode-dmxapi-${{ github.ref_name }}-macos-arm64
+            ./opencode-dmxapi-${{ github.ref_name }}-macos-arm64
             ```
 
             ---
@@ -108,5 +124,5 @@ jobs:
             opencode-dmxapi-${{ github.ref_name }}-windows-amd64.exe
             opencode-dmxapi-${{ github.ref_name }}-linux-amd64
             opencode-dmxapi-${{ github.ref_name }}-linux-arm64
-            opencode-dmxapi-${{ github.ref_name }}-darwin-amd64
-            opencode-dmxapi-${{ github.ref_name }}-darwin-arm64
+            opencode-dmxapi-${{ github.ref_name }}-macos-amd64
+            opencode-dmxapi-${{ github.ref_name }}-macos-arm64
