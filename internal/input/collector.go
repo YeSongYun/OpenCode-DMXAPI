@@ -34,25 +34,20 @@ func NewCollector() *Collector {
 	}
 }
 
-// CollectConfigMode 收集配置模式选择
+// CollectConfigMode 收集配置模式选择（上下键交互菜单）
 func (c *Collector) CollectConfigMode() (ConfigMode, error) {
-	fmt.Print("请输入选项 (1 或 2): ")
-
-	input, err := c.reader.ReadString('\n')
+	idx, err := SelectMenu("请选择配置模式:", []string{
+		"完整配置 - 重新配置所有选项 (URL, API Key, 模型)",
+		"仅配置模型 - 保留现有 URL 和 API Key，只修改模型列表",
+	})
 	if err != nil {
-		return 0, fmt.Errorf("读取选项失败: %w", err)
+		return 0, err
 	}
 
-	input = strings.TrimSpace(input)
-
-	switch input {
-	case "1":
+	if idx == 0 {
 		return ConfigModeFull, nil
-	case "2":
-		return ConfigModeModelOnly, nil
-	default:
-		return 0, fmt.Errorf("无效的选项，请输入 1 或 2")
 	}
+	return ConfigModeModelOnly, nil
 }
 
 // CollectURL 收集URL输入

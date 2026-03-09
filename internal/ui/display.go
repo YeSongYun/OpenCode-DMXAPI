@@ -118,10 +118,7 @@ func PrintConfigModeHeader() {
 	fmt.Println()
 	fmt.Println(colorize(ColorCyan, "=== 配置模式选择 ==="))
 	fmt.Println()
-	fmt.Println("检测到现有配置，请选择配置模式:")
-	fmt.Println()
-	fmt.Println("  [1] 完整配置 - 重新配置所有选项 (URL, API Key, 模型)")
-	fmt.Println("  [2] 仅配置模型 - 保留现有 URL 和 API Key，只修改模型列表")
+	fmt.Println("检测到现有配置，请使用 ↑↓ 键选择配置模式:")
 	fmt.Println()
 }
 
