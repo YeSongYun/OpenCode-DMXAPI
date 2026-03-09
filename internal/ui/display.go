@@ -64,9 +64,9 @@ func PrintBanner() {
 	fmt.Println()
 }
 
-// PrintStep 打印步骤信息
-func PrintStep(step int, message string) {
-	fmt.Printf("\n%s %s\n", colorize(ColorCyan, fmt.Sprintf("[%d]", step)), message)
+// PrintStep 打印步骤信息，格式为 [N/M]
+func PrintStep(step, total int, message string) {
+	fmt.Printf("\n%s %s\n", colorize(ColorCyan, fmt.Sprintf("[%d/%d]", step, total)), message)
 }
 
 // PrintSuccess 打印成功信息

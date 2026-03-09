@@ -1,10 +1,11 @@
 package input
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
-	"os"
 	"strings"
+
+	"github.com/charmbracelet/huh"
 )
 
 // ConfigMode 配置模式
@@ -23,102 +24,96 @@ func NewCollector() *Collector {
 	return &Collector{}
 }
 
-// CollectConfigMode 收集配置模式选择（上下键交互菜单）
+// CollectConfigMode 收集配置模式选择
 func (c *Collector) CollectConfigMode() (ConfigMode, error) {
-	idx, err := SelectMenu("请选择配置模式:", []string{
-		"完整配置 - 重新配置所有选项 (URL, API Key, 模型)",
-		"仅配置模型 - 保留现有 URL 和 API Key，只修改模型列表",
-	})
+	var mode ConfigMode
+	err := huh.NewSelect[ConfigMode]().
+		Title("请选择配置模式").
+		Options(
+			huh.NewOption("完整配置 - 重新配置所有选项", ConfigModeFull),
+			huh.NewOption("仅配置模型 - 保留现有 URL 和 API Key", ConfigModeModelOnly),
+		).
+		Value(&mode).
+		Run()
 	if err != nil {
-		return 0, err
+		return 0, mapError(err)
 	}
-
-	if idx == 0 {
-		return ConfigModeFull, nil
-	}
-	return ConfigModeModelOnly, nil
+	return mode, nil
 }
 
 // CollectURL 收集URL输入
 func (c *Collector) CollectURL() (string, error) {
-	fmt.Println("请输入 DMXAPI URL")
-	fmt.Println("示例: https://www.dmxapi.cn")
-	fmt.Print("URL: ")
-
-	reader := bufio.NewReader(os.Stdin)
-	url, err := reader.ReadString('\n')
+	var rawURL string
+	err := huh.NewInput().
+		Title("请输入 DMXAPI URL").
+		Description("留空使用默认值: https://www.dmxapi.cn").
+		Placeholder("https://www.dmxapi.cn").
+		Validate(func(s string) error {
+			if s == "" {
+				return nil // 允许空值，后续填默认值
+			}
+			return ValidateURL(s)
+		}).
+		Value(&rawURL).
+		Run()
 	if err != nil {
-		return "", fmt.Errorf("读取URL失败: %w", err)
+		return "", mapError(err)
 	}
-
-	url = strings.TrimSpace(url)
-
-	// 如果用户没有输入，使用默认值
-	if url == "" {
-		url = "https://www.dmxapi.cn"
-		fmt.Printf("使用默认值: %s\n", url)
+	if rawURL == "" {
+		rawURL = "https://www.dmxapi.cn"
 	}
-
-	// 移除末尾的斜杠
-	url = strings.TrimSuffix(url, "/")
-
-	return url, nil
+	return strings.TrimSuffix(rawURL, "/"), nil
 }
 
 // CollectAPIKey 收集API Key输入
 func (c *Collector) CollectAPIKey() (string, error) {
-	fmt.Println("请输入 API Key")
-	fmt.Println("获取地址: https://www.dmxapi.cn/token")
-	fmt.Print("API Key: ")
-
-	reader := bufio.NewReader(os.Stdin)
-	apiKey, err := reader.ReadString('\n')
+	var apiKey string
+	err := huh.NewInput().
+		Title("请输入 API Key").
+		Description("获取地址: https://www.dmxapi.cn/token").
+		EchoMode(huh.EchoModePassword).
+		Validate(ValidateAPIKey).
+		Value(&apiKey).
+		Run()
 	if err != nil {
-		return "", fmt.Errorf("读取API Key失败: %w", err)
+		return "", mapError(err)
 	}
-
-	apiKey = strings.TrimSpace(apiKey)
-
-	if apiKey == "" {
-		return "", fmt.Errorf("API Key 不能为空")
-	}
-
 	return apiKey, nil
 }
 
 // CollectModels 收集模型名称输入
 func (c *Collector) CollectModels() ([]string, error) {
-	fmt.Println("请输入模型名称（多个模型用逗号分隔）")
-	fmt.Println("可用模型列表: https://www.dmxapi.cn/rmb")
-	fmt.Println("示例: claude-opus-4-5-20251101,DeepSeek-V3.2-Fast")
-	fmt.Print("模型: ")
-
-	reader := bufio.NewReader(os.Stdin)
-	line, err := reader.ReadString('\n')
+	var line string
+	err := huh.NewInput().
+		Title("请输入模型名称，多个用逗号分隔").
+		Description("可用模型: https://www.dmxapi.cn/rmb").
+		Placeholder("claude-opus-4-5-20251101,DeepSeek-V3.2-Fast").
+		Validate(func(s string) error {
+			return ValidateModels(parseModels(s))
+		}).
+		Value(&line).
+		Run()
 	if err != nil {
-		return nil, fmt.Errorf("读取模型失败: %w", err)
+		return nil, mapError(err)
 	}
-
-	line = strings.TrimSpace(line)
-
-	if line == "" {
-		return nil, fmt.Errorf("至少需要指定一个模型")
-	}
-
-	// 分割并清理模型名称
-	parts := strings.Split(line, ",")
-	var models []string
-	for _, p := range parts {
-		model := strings.TrimSpace(p)
-		if model != "" {
-			models = append(models, model)
-		}
-	}
-
-	if len(models) == 0 {
-		return nil, fmt.Errorf("至少需要指定一个模型")
-	}
-
-	return models, nil
+	return parseModels(line), nil
 }
 
+// parseModels 解析逗号分隔的模型名称
+func parseModels(s string) []string {
+	var models []string
+	for _, p := range strings.Split(s, ",") {
+		if m := strings.TrimSpace(p); m != "" {
+			models = append(models, m)
+		}
+	}
+	return models
+}
+
+// mapError 将 huh 的 Ctrl+C 错误映射为友好消息
+func mapError(err error) error {
+	if errors.Is(err, huh.ErrUserAborted) {
+		return fmt.Errorf("用户取消")
+	}
+	return err
+}
