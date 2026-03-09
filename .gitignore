@@ -9,6 +9,7 @@ dmxapi-config-linux
 dmxapi-config-linux-*
 dmxapi-config-macos-arm64
 dmxapi-config-macos-amd64
+dmxapi-config-mac
 dmxapi-config-windows.exe
 opencode-dmxapi-*
 

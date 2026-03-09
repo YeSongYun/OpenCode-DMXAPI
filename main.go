@@ -37,6 +37,22 @@ func main() {
 	ui.PrintBanner()
 	ui.PrintDivider()
 
+	// 检测 opencode 是否已安装
+	installed, version := ui.CheckOpencode()
+	if installed {
+		if version != "" {
+			ui.PrintSuccess(fmt.Sprintf("已检测到 opencode 已安装（版本：%s）", version))
+		} else {
+			ui.PrintSuccess("已检测到 opencode 已安装")
+		}
+		fmt.Println()
+	} else {
+		ui.PrintWarning("未检测到 opencode，请先安装后再使用本工具")
+		ui.PrintInfo("官网地址：https://opencode.ai")
+		waitForExit()
+		os.Exit(1)
+	}
+
 	// 创建输入收集器
 	collector := input.NewCollector()
 
