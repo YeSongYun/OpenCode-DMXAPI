@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	githubReleasesAPI = "https://api.github.com/repos/YeSongYun/OpenCode-DMXAPI/releases/latest"
-	downloadURL       = "https://cnb.cool/dmxapi/opencode_dmxapi/-/releases"
+	cnbReleasesAPI = "https://cnb.cool/dmxapi/opencode_dmxapi/-/releases"
+	downloadURL    = "https://cnb.cool/dmxapi/opencode_dmxapi/-/releases"
 )
 
 // UpdateResult 存储版本检查结果
@@ -19,7 +19,7 @@ type UpdateResult struct {
 	DownloadURL   string
 }
 
-// CheckForUpdateAsync 异步检查 GitHub 最新版本，通过 channel 返回结果
+// CheckForUpdateAsync 异步检查 CNB 最新版本，通过 channel 返回结果
 // 失败时发送 UpdateResult{HasUpdate: false}
 func CheckForUpdateAsync() <-chan UpdateResult {
 	ch := make(chan UpdateResult, 1)
@@ -31,20 +31,30 @@ func CheckForUpdateAsync() <-chan UpdateResult {
 
 func checkUpdate() UpdateResult {
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(githubReleasesAPI)
+	req, err := http.NewRequest("GET", cnbReleasesAPI, nil)
+	if err != nil {
+		return UpdateResult{}
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return UpdateResult{}
 	}
 	defer resp.Body.Close()
 
-	var release struct {
+	var releases []struct {
 		TagName string `json:"tag_name"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return UpdateResult{}
 	}
 
-	latestTag := strings.TrimPrefix(release.TagName, "v")
+	if len(releases) == 0 {
+		return UpdateResult{}
+	}
+
+	latestTag := strings.TrimPrefix(releases[0].TagName, "v")
 	if latestTag == "" || latestTag == Version {
 		return UpdateResult{}
 	}
