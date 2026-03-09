@@ -5,6 +5,7 @@ package input
 import (
 	"fmt"
 	"os"
+	"syscall"
 )
 
 // renderMenu 用 ANSI 控制码原地重绘菜单，避免滚动
@@ -39,6 +40,22 @@ func readByte() (byte, error) {
 	}
 }
 
+// drainStdin 丢弃 stdin 中可能残留的数据，防止干扰后续的逐字节读取
+func drainStdin() {
+	fd := int(os.Stdin.Fd())
+	// 临时切换为非阻塞模式，读取并丢弃所有残留数据
+	_ = syscall.SetNonblock(fd, true)
+	buf := make([]byte, 256)
+	for {
+		n, _ := os.Stdin.Read(buf)
+		if n <= 0 {
+			break
+		}
+	}
+	// 恢复阻塞模式，配合 VMIN=1 确保后续 Read 一定等到有数据
+	_ = syscall.SetNonblock(fd, false)
+}
+
 // selectMenuImpl Unix/macOS 交互实现：syscall raw mode + 方向键读取
 func selectMenuImpl(prompt string, options []string) (int, error) {
 	state, err := makeTerminalRaw()
@@ -48,6 +65,9 @@ func selectMenuImpl(prompt string, options []string) (int, error) {
 		return selectMenuFallback(prompt, options)
 	}
 	defer restoreTerminal(state)
+
+	// 进入 raw mode 后，丢弃可能的残留输入数据
+	drainStdin()
 
 	selected := 0
 	renderMenu(prompt, options, selected, true)

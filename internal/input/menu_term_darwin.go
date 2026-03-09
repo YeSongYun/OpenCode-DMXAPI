@@ -3,6 +3,7 @@
 package input
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
 )
@@ -43,6 +44,19 @@ func makeTerminalRaw() (*terminalState, error) {
 		ioctlSetTermios,
 		uintptr(unsafe.Pointer(&t))); errno != 0 {
 		return nil, errno
+	}
+
+	// 验证 raw mode 是否设置成功：读回 termios 检查关键参数
+	var verify syscall.Termios
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
+		uintptr(syscall.Stdin),
+		ioctlGetTermios,
+		uintptr(unsafe.Pointer(&verify))); errno != 0 {
+		return nil, fmt.Errorf("验证 termios 失败: %w", errno)
+	}
+	if verify.Cc[syscall.VMIN] != 1 || verify.Cc[syscall.VTIME] != 0 {
+		return nil, fmt.Errorf("termios 验证失败: VMIN=%d(期望1) VTIME=%d(期望0)",
+			verify.Cc[syscall.VMIN], verify.Cc[syscall.VTIME])
 	}
 
 	return state, nil

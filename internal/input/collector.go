@@ -1,7 +1,9 @@
 package input
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -43,7 +45,8 @@ func (c *Collector) CollectURL() (string, error) {
 	fmt.Println("示例: https://www.dmxapi.cn")
 	fmt.Print("URL: ")
 
-	url, err := stdinReader.ReadString('\n')
+	reader := bufio.NewReader(os.Stdin)
+	url, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("读取URL失败: %w", err)
 	}
@@ -68,7 +71,8 @@ func (c *Collector) CollectAPIKey() (string, error) {
 	fmt.Println("获取地址: https://www.dmxapi.cn/token")
 	fmt.Print("API Key: ")
 
-	apiKey, err := stdinReader.ReadString('\n')
+	reader := bufio.NewReader(os.Stdin)
+	apiKey, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("读取API Key失败: %w", err)
 	}
@@ -89,7 +93,8 @@ func (c *Collector) CollectModels() ([]string, error) {
 	fmt.Println("示例: claude-opus-4-5-20251101,DeepSeek-V3.2-Fast")
 	fmt.Print("模型: ")
 
-	line, err := stdinReader.ReadString('\n')
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
 	if err != nil {
 		return nil, fmt.Errorf("读取模型失败: %w", err)
 	}
