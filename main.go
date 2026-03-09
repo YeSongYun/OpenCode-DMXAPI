@@ -33,6 +33,10 @@ func waitForExit() {
 
 func main() {
 	ui.PrintBanner()
+
+	// 启动异步检查更新（在后续操作耗时期间并行进行 HTTP 请求）
+	updateCh := ui.CheckForUpdateAsync()
+
 	ui.PrintDivider()
 
 	// 检测 opencode 是否已安装
@@ -49,6 +53,16 @@ func main() {
 		ui.PrintInfo("官网地址：https://opencode.ai")
 		waitForExit()
 		os.Exit(1)
+	}
+
+	// 展示更新提示（非阻塞：已有结果就显示，网络慢则跳过）
+	select {
+	case result := <-updateCh:
+		if result.HasUpdate {
+			ui.PrintUpdateNotice(result.LatestVersion, result.DownloadURL)
+		}
+	default:
+		// 结果尚未返回，继续不等待
 	}
 
 	collector := input.NewCollector()

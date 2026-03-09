@@ -227,3 +227,13 @@ func PrintModelOnlyModeInfo() {
 	fmt.Println()
 	PrintInfo("仅配置模型模式")
 }
+
+// PrintUpdateNotice 打印新版本提示
+func PrintUpdateNotice(latestVersion, dlURL string) {
+	fmt.Printf("  %s 发现新版本 %s（当前 v%s）\n",
+		colorize(ColorYellow, symbol("→", "->")),
+		colorize(ColorGreen+ColorBold, "v"+latestVersion),
+		Version,
+	)
+	fmt.Printf("    %s %s\n\n", colorize(ColorDim, "下载:"), dlURL)
+}
