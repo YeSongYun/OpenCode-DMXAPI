@@ -213,17 +213,17 @@ func PrintComplete() {
 // PrintConfigModeHeader 打印配置模式选择标题
 func PrintConfigModeHeader() {
 	fmt.Println()
-	fmt.Printf("  %s %s\n", colorize(ColorCyan, symbol("⚙", "[*]")), "检测到现有配置，请选择配置模式：")
+	fmt.Printf("  %s %s\n", colorize(ColorCyan, symbol("⚙", "[*]")), "请选择配置模式：")
 	fmt.Println()
 }
 
 // PrintExistingConfigInfo 显示当前配置信息
 func PrintExistingConfigInfo(url, maskedAPIKey string, models []string) {
 	fmt.Println()
-	fmt.Printf("  %s 当前配置\n", colorize(ColorCyan, symbol("ℹ", "[i]")))
-	fmt.Printf("    URL:    %s\n", url)
-	fmt.Printf("    Key:    %s\n", maskedAPIKey)
-	fmt.Printf("    模型:   %v\n", models)
+	fmt.Printf("  %s 检测到现有 DMXAPI 配置\n", colorize(ColorCyan, symbol("⚙", "[*]")))
+	fmt.Printf("    %-6s  %s\n", "URL:", url)
+	fmt.Printf("    %-6s  %s\n", "Key:", maskedAPIKey)
+	fmt.Printf("    %-6s  %s\n", "模型:", strings.Join(models, ", "))
 	fmt.Println()
 }
 

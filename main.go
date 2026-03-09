@@ -56,6 +56,7 @@ func main() {
 	existingConfig := reader.ReadExistingConfig()
 
 	if existingConfig != nil {
+		ui.PrintExistingConfigInfo(existingConfig.URL, config.MaskAPIKey(existingConfig.APIKey), existingConfig.Models)
 		ui.PrintConfigModeHeader()
 
 		mode, err := collector.CollectConfigMode()
@@ -171,7 +172,6 @@ func runFullConfiguration(collector *input.Collector) {
 // runModelOnlyConfiguration 运行仅配置模型流程（3步）
 func runModelOnlyConfiguration(collector *input.Collector, existing *config.ExistingConfig) {
 	ui.PrintModelOnlyModeInfo()
-	ui.PrintExistingConfigInfo(existing.URL, config.MaskAPIKey(existing.APIKey), existing.Models)
 
 	// [1/3] 配置模型
 	ui.PrintStep(1, 3, "配置模型")
