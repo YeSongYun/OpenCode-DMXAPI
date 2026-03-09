@@ -89,10 +89,16 @@ type AnthropicError struct {
 // TestConnection 测试API连接
 // 使用用户指定的 model 发送一个简单请求，验证 API Key 和 URL 是否有效
 func (t *Tester) TestConnection(model string) error {
-	if config.ClassifyModel(model) == config.ProviderAnthropic {
+	switch config.ClassifyModel(model) {
+	case config.ProviderAnthropic:
 		return t.testAnthropicConnection(model)
+	case config.ProviderGoogle:
+		return t.testGoogleConnection(model)
+	case config.ProviderOpenAIResponses:
+		return t.testOpenAIResponsesConnection(model)
+	default:
+		return t.testOpenAIConnection(model)
 	}
-	return t.testOpenAIConnection(model)
 }
 
 // testAnthropicConnection 使用 Anthropic Messages API 测试连接
@@ -143,6 +149,122 @@ func (t *Tester) testAnthropicConnection(model string) error {
 
 	if len(anthResp.Content) == 0 {
 		return fmt.Errorf("API响应无效：没有返回任何内容")
+	}
+
+	return nil
+}
+
+// GeminiRequest Google Generative Language API 请求结构
+type GeminiRequest struct {
+	Contents []GeminiContent `json:"contents"`
+}
+
+// GeminiContent Gemini 内容结构
+type GeminiContent struct {
+	Parts []GeminiPart `json:"parts"`
+}
+
+// GeminiPart Gemini 消息片段
+type GeminiPart struct {
+	Text string `json:"text"`
+}
+
+// GeminiResponse Google Generative Language API 响应结构
+type GeminiResponse struct {
+	Candidates []struct{} `json:"candidates"`
+	Error      *struct {
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+}
+
+// OpenAIResponsesRequest OpenAI Responses API 请求结构
+type OpenAIResponsesRequest struct {
+	Model string `json:"model"`
+	Input string `json:"input"`
+}
+
+// testGoogleConnection 使用 Google Generative Language API 测试连接
+func (t *Tester) testGoogleConnection(model string) error {
+	req := GeminiRequest{
+		Contents: []GeminiContent{
+			{Parts: []GeminiPart{{Text: "Hi"}}},
+		},
+	}
+
+	jsonData, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("序列化请求失败: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/v1beta/models/%s:generateContent?key=%s", t.baseURL, model, t.apiKey)
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := t.client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("发送请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var geminiResp GeminiResponse
+		if json.Unmarshal(body, &geminiResp) == nil && geminiResp.Error != nil {
+			return fmt.Errorf("API错误 (%d): %s", resp.StatusCode, geminiResp.Error.Message)
+		}
+		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+	}
+
+	var geminiResp GeminiResponse
+	if err := json.Unmarshal(body, &geminiResp); err != nil {
+		return fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	if len(geminiResp.Candidates) == 0 {
+		return fmt.Errorf("API响应无效：没有返回任何 candidates")
+	}
+
+	return nil
+}
+
+// testOpenAIResponsesConnection 使用 OpenAI Responses API 测试连接
+func (t *Tester) testOpenAIResponsesConnection(model string) error {
+	req := OpenAIResponsesRequest{
+		Model: model,
+		Input: "Hi",
+	}
+
+	jsonData, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("序列化请求失败: %w", err)
+	}
+
+	url := t.baseURL + "/v1/responses"
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
+
+	resp, err := t.client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("发送请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
 	}
 
 	return nil
