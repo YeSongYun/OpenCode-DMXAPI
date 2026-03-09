@@ -100,7 +100,7 @@ func NewDMXAPIConfig(url, apiKey string, models []string) *OpenCodeConfig {
 			NPM:  info.NPM,
 			Name: info.Name,
 			Options: ProviderOptions{
-				BaseURL: url + "/v1",
+				BaseURL: strings.TrimSuffix(url, "/v1") + "/v1",
 				APIKey:  apiKey,
 			},
 			Models: modelMap,

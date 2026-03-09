@@ -33,8 +33,8 @@ func makeTerminalRaw() (*terminalState, error) {
 	// 关闭软件流控和 CR/LF 转换等输入处理
 	t.Iflag &^= syscall.IXON | syscall.ICRNL | syscall.BRKINT | syscall.INPCK | syscall.ISTRIP
 	t.Cflag |= syscall.CS8
-	// VMIN=0, VTIME=1：最多等待 100ms；若无字节则 Read 返回 0
-	// 用于优雅处理孤立 ESC 按键（不阻塞等待后续字节）
+	// VMIN=0, VTIME=1：超时模式，Read 最多等待 100ms
+	// 单独按 ESC 时 100ms 后返回，ESC 序列的后续字节（[ 和 A/B）在 100ms 内到达可正常读取
 	t.Cc[syscall.VMIN] = 0
 	t.Cc[syscall.VTIME] = 1
 

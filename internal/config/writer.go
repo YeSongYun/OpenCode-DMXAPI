@@ -47,9 +47,12 @@ func (w *Writer) WriteConfig(config *OpenCodeConfig) (string, error) {
 		return "", fmt.Errorf("序列化配置失败: %w", err)
 	}
 
-	// 写入文件
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
+	// 写入文件（配置中含 API Key，使用 0600 限制权限）
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
 		return "", fmt.Errorf("写入配置文件失败: %w", err)
+	}
+	if runtime.GOOS == "windows" {
+		fmt.Println("注意: Windows 不支持 Unix 文件权限，请确保 opencode.json 所在目录访问受限。")
 	}
 
 	return configPath, nil
@@ -112,8 +115,8 @@ func (w *Writer) backupIfExists(filePath string) error {
 		return fmt.Errorf("读取原文件失败: %w", err)
 	}
 
-	// 写入备份
-	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+	// 写入备份（继承原文件的严格权限）
+	if err := os.WriteFile(backupPath, data, 0600); err != nil {
 		return fmt.Errorf("创建备份失败: %w", err)
 	}
 
