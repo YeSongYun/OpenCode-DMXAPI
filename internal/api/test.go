@@ -204,8 +204,8 @@ type OpenAIResponsesResponse struct {
 }
 
 // testGoogleConnection 使用 Google Generative Language API 测试连接
-// URL 格式与 opencode 配置中 @ai-sdk/google baseURL(url+"/v1") 一致：
-// {baseURL}/v1/models/{model}:generateContent
+// URL 格式与 opencode 配置中 @ai-sdk/google baseURL(url+"/v1beta") 一致：
+// {baseURL}/v1beta/models/{model}:generateContent
 func (t *Tester) testGoogleConnection(model string) error {
 	req := GeminiRequest{
 		Contents: []GeminiContent{
@@ -218,7 +218,7 @@ func (t *Tester) testGoogleConnection(model string) error {
 		return fmt.Errorf("序列化请求失败: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/v1/models/%s:generateContent", t.baseURL, model)
+	url := fmt.Sprintf("%s/v1beta/models/%s:generateContent", t.baseURL, model)
 	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %w", err)
