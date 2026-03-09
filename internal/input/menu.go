@@ -12,6 +12,9 @@ const (
 	colorReset = "\033[0m"
 )
 
+// stdinReader 包级别共享的 stdin reader，避免多个 bufio.Reader 争抢同一个 os.Stdin
+var stdinReader = bufio.NewReader(os.Stdin)
+
 // SelectMenu 显示交互式上下键选择菜单，返回选中项的索引（0-based）
 func SelectMenu(prompt string, options []string) (int, error) {
 	if len(options) == 0 {
@@ -27,10 +30,9 @@ func selectMenuFallback(prompt string, options []string) (int, error) {
 		fmt.Printf("  %d. %s\n", i+1, opt)
 	}
 
-	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("请输入选项 (1-%d): ", len(options))
-		line, err := reader.ReadString('\n')
+		line, err := stdinReader.ReadString('\n')
 		if err != nil {
 			return 0, fmt.Errorf("读取输入失败: %w", err)
 		}

@@ -35,14 +35,14 @@ func (w *Writer) WriteConfig(config *OpenCodeConfig) (string, error) {
 		fmt.Printf("警告: 备份现有配置失败: %v\n", err)
 	}
 
-	// 合并现有配置（如果存在）
-	existingConfig := w.readExistingConfig(configPath)
-	if existingConfig != nil {
-		config = w.mergeConfig(existingConfig, config)
+	// 合并现有配置（使用 map 保留未知字段）
+	merged, err := w.mergeConfigPreservingFields(configPath, config)
+	if err != nil {
+		return "", fmt.Errorf("合并配置失败: %w", err)
 	}
 
 	// 序列化为JSON
-	data, err := json.MarshalIndent(config, "", "  ")
+	data, err := json.MarshalIndent(merged, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("序列化配置失败: %w", err)
 	}
@@ -68,6 +68,11 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 	// 确保目录存在
 	if err := EnsureDir(authPath); err != nil {
 		return "", err
+	}
+
+	// 备份现有认证配置
+	if err := w.backupIfExists(authPath); err != nil {
+		fmt.Printf("警告: 备份现有认证配置失败: %v\n", err)
 	}
 
 	// 读取并合并现有认证配置
@@ -124,19 +129,45 @@ func (w *Writer) backupIfExists(filePath string) error {
 	return nil
 }
 
-// readExistingConfig 读取现有的 opencode.json 配置
-func (w *Writer) readExistingConfig(filePath string) *OpenCodeConfig {
+// mergeConfigPreservingFields 使用 map[string]interface{} 合并配置，保留 JSON 中的所有字段
+func (w *Writer) mergeConfigPreservingFields(filePath string, newConfig *OpenCodeConfig) (interface{}, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil
+		// 文件不存在，直接返回新配置
+		return newConfig, nil
 	}
 
-	var config OpenCodeConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil
+	var existing map[string]interface{}
+	if err := json.Unmarshal(data, &existing); err != nil {
+		// 解析失败，直接使用新配置
+		return newConfig, nil
 	}
 
-	return &config
+	// 将新配置序列化再反序列化为 map，以便合并
+	newData, err := json.Marshal(newConfig)
+	if err != nil {
+		return newConfig, nil
+	}
+	var newMap map[string]interface{}
+	if err := json.Unmarshal(newData, &newMap); err != nil {
+		return newConfig, nil
+	}
+
+	// 合并：新配置的 provider 覆盖到现有 map 中
+	if newProvider, ok := newMap["provider"]; ok {
+		existingProvider, _ := existing["provider"].(map[string]interface{})
+		if existingProvider == nil {
+			existingProvider = make(map[string]interface{})
+		}
+		if np, ok := newProvider.(map[string]interface{}); ok {
+			for k, v := range np {
+				existingProvider[k] = v
+			}
+		}
+		existing["provider"] = existingProvider
+	}
+
+	return existing, nil
 }
 
 // readExistingAuth 读取现有的 auth.json 配置
@@ -152,18 +183,4 @@ func (w *Writer) readExistingAuth(filePath string) AuthConfig {
 	}
 
 	return auth
-}
-
-// mergeConfig 合并配置（保留现有的其他提供者）
-func (w *Writer) mergeConfig(existing, new *OpenCodeConfig) *OpenCodeConfig {
-	if existing.Provider == nil {
-		existing.Provider = make(map[string]Provider)
-	}
-
-	// 合并新的提供者配置
-	for k, v := range new.Provider {
-		existing.Provider[k] = v
-	}
-
-	return existing
 }

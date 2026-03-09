@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"dmxapi-config/internal/api"
 	"dmxapi-config/internal/auth"
@@ -196,7 +197,7 @@ func runFullConfiguration(collector *input.Collector) {
 
 	// 显示配置摘要
 	fmt.Println("配置摘要:")
-	fmt.Printf("  - URL: %s/v1\n", url)
+	fmt.Printf("  - URL: %s/v1\n", strings.TrimSuffix(url, "/v1"))
 	fmt.Printf("  - 模型: %v\n", models)
 	fmt.Printf("  - 配置文件: %s\n", configPath)
 	fmt.Printf("  - 认证文件: %s\n", authPath)
@@ -267,7 +268,7 @@ func runModelOnlyConfiguration(collector *input.Collector, existing *config.Exis
 
 	// 显示配置摘要
 	fmt.Println("配置摘要:")
-	fmt.Printf("  - URL: %s/v1\n", existing.URL)
+	fmt.Printf("  - URL: %s/v1\n", strings.TrimSuffix(existing.URL, "/v1"))
 	fmt.Printf("  - 模型: %v\n", models)
 	fmt.Printf("  - 配置文件: %s\n", configPath)
 	fmt.Printf("  - 认证文件: %s\n", authPath)

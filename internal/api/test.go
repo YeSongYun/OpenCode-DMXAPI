@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"dmxapi-config/internal/config"
@@ -55,6 +56,8 @@ type Tester struct {
 
 // NewTester 创建新的API测试器
 func NewTester(baseURL, apiKey string) *Tester {
+	// 规范化 baseURL：去掉末尾的 /v1，避免后续拼接路径时产生双重 /v1
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	return &Tester{
 		baseURL: baseURL,
 		apiKey:  apiKey,
@@ -129,7 +132,7 @@ func (t *Tester) testAnthropicConnection(model string) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %w", err)
 	}
@@ -230,7 +233,7 @@ func (t *Tester) testGoogleConnection(model string) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %w", err)
 	}
@@ -282,7 +285,7 @@ func (t *Tester) testOpenAIResponsesConnection(model string) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %w", err)
 	}
@@ -336,7 +339,7 @@ func (t *Tester) testOpenAIConnection(model string) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %w", err)
 	}

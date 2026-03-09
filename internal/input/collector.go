@@ -1,9 +1,7 @@
 package input
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -16,15 +14,11 @@ const (
 )
 
 // Collector 用户输入收集器
-type Collector struct {
-	reader *bufio.Reader
-}
+type Collector struct{}
 
 // NewCollector 创建新的输入收集器
 func NewCollector() *Collector {
-	return &Collector{
-		reader: bufio.NewReader(os.Stdin),
-	}
+	return &Collector{}
 }
 
 // CollectConfigMode 收集配置模式选择（上下键交互菜单）
@@ -49,7 +43,7 @@ func (c *Collector) CollectURL() (string, error) {
 	fmt.Println("示例: https://www.dmxapi.cn")
 	fmt.Print("URL: ")
 
-	url, err := c.reader.ReadString('\n')
+	url, err := stdinReader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("读取URL失败: %w", err)
 	}
@@ -74,7 +68,7 @@ func (c *Collector) CollectAPIKey() (string, error) {
 	fmt.Println("获取地址: https://www.dmxapi.cn/token")
 	fmt.Print("API Key: ")
 
-	apiKey, err := c.reader.ReadString('\n')
+	apiKey, err := stdinReader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("读取API Key失败: %w", err)
 	}
@@ -95,7 +89,7 @@ func (c *Collector) CollectModels() ([]string, error) {
 	fmt.Println("示例: claude-opus-4-5-20251101,DeepSeek-V3.2-Fast")
 	fmt.Print("模型: ")
 
-	line, err := c.reader.ReadString('\n')
+	line, err := stdinReader.ReadString('\n')
 	if err != nil {
 		return nil, fmt.Errorf("读取模型失败: %w", err)
 	}
