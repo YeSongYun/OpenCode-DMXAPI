@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 )
 
@@ -48,11 +47,9 @@ func (w *Writer) WriteConfig(config *OpenCodeConfig) (string, error) {
 	}
 
 	// 写入文件（配置中含 API Key，使用 0600 限制权限）
+	// 注意：Windows 会忽略 Unix 权限位（0600），Windows 权限警告已在 EnsureDir 中统一输出
 	if err := os.WriteFile(configPath, data, 0600); err != nil {
 		return "", fmt.Errorf("写入配置文件失败: %w", err)
-	}
-	if runtime.GOOS == "windows" {
-		fmt.Println("注意: Windows 不支持 Unix 文件权限，请确保 opencode.json 所在目录访问受限。")
 	}
 
 	return configPath, nil
@@ -91,12 +88,9 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 	}
 
 	// 写入文件（使用更严格的权限）
-	// 注意：Windows 会忽略 Unix 权限位（0600），auth.json 在 Windows 上不受文件系统权限保护
+	// 注意：Windows 会忽略 Unix 权限位（0600），Windows 权限警告已在 EnsureDir 中统一输出
 	if err := os.WriteFile(authPath, data, 0600); err != nil {
 		return "", fmt.Errorf("写入认证文件失败: %w", err)
-	}
-	if runtime.GOOS == "windows" {
-		fmt.Println("注意: Windows 不支持 Unix 文件权限，请确保 auth.json 所在目录访问受限。")
 	}
 
 	return authPath, nil
