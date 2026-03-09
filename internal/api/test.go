@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"dmxapi-config/internal/config"
@@ -56,8 +55,8 @@ type Tester struct {
 
 // NewTester 创建新的API测试器
 func NewTester(baseURL, apiKey string) *Tester {
-	// 规范化 baseURL：去掉末尾的 /v1，避免后续拼接路径时产生双重 /v1
-	baseURL = strings.TrimSuffix(baseURL, "/v1")
+	// 规范化 baseURL：去掉末尾的版本路径后缀（/v1、/v1beta 等），避免后续拼接路径时产生重复
+	baseURL = config.NormalizeBaseURL(baseURL)
 	return &Tester{
 		baseURL: baseURL,
 		apiKey:  apiKey,

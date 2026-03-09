@@ -9,6 +9,15 @@ import (
 // 以 "o1"、"o3" 或 "o4" 开头，后跟 "-" 或字符串结尾（避免误匹配含这些字母的其他模型名）
 var o1o3o4Pattern = regexp.MustCompile(`^o[134](-|$)`)
 
+// versionSuffixPattern 匹配 URL 末尾的 API 版本路径后缀，如 /v1、/v1beta、/v1beta1 等
+var versionSuffixPattern = regexp.MustCompile(`/v\d+(beta\d*)?/?$`)
+
+// NormalizeBaseURL 去除 URL 末尾的版本路径后缀（/v1、/v1beta、/v1beta1 等），
+// 返回不含版本路径的基础 URL，便于后续按 provider 类型拼接正确的版本路径。
+func NormalizeBaseURL(url string) string {
+	return strings.TrimRight(versionSuffixPattern.ReplaceAllString(url, ""), "/")
+}
+
 // ProviderType 定义 provider 类型
 type ProviderType int
 
@@ -96,10 +105,12 @@ func NewDMXAPIConfig(url, apiKey string, models []string) *OpenCodeConfig {
 	providers := make(map[string]Provider)
 	for pType, modelMap := range modelGroups {
 		info := GetProviderInfo(pType)
-		// Google SDK (@ai-sdk/google) 的 baseURL 默认是 /v1beta，直接拼接 /models/{model}:generateContent
-		baseURL := strings.TrimSuffix(url, "/v1") + "/v1"
+		// 先统一去掉版本后缀，再按 provider 类型拼接正确的版本路径
+		// Google SDK (@ai-sdk/google) 使用 /v1beta，其他 provider 使用 /v1
+		cleanURL := NormalizeBaseURL(url)
+		baseURL := cleanURL + "/v1"
 		if pType == ProviderGoogle {
-			baseURL = strings.TrimSuffix(url, "/v1") + "/v1beta"
+			baseURL = cleanURL + "/v1beta"
 		}
 		providers[info.ID] = Provider{
 			NPM:  info.NPM,
