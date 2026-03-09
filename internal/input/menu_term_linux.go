@@ -31,10 +31,10 @@ func makeTerminalRaw() (*terminalState, error) {
 	t.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.IEXTEN | syscall.ISIG
 	t.Iflag &^= syscall.IXON | syscall.ICRNL | syscall.BRKINT | syscall.INPCK | syscall.ISTRIP
 	t.Cflag |= syscall.CS8
-	// VMIN=0, VTIME=1：最多等待 100ms；若无字节则 Read 返回 0
-	// 用于优雅处理孤立 ESC 按键（不阻塞等待后续字节）
-	t.Cc[syscall.VMIN] = 0
-	t.Cc[syscall.VTIME] = 1
+	// VMIN=1, VTIME=0：阻塞模式，Read 至少等待 1 字节才返回
+	// 保证每次 Read 一定返回数据，避免超时导致 ESC 序列读取不完整
+	t.Cc[syscall.VMIN] = 1
+	t.Cc[syscall.VTIME] = 0
 
 	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stdin),

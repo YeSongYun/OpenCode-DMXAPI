@@ -14,6 +14,8 @@ const (
 	ColorBlue   = "\033[34m"
 	ColorRed    = "\033[31m"
 	ColorCyan   = "\033[36m"
+	ColorBold   = "\033[1m"
+	ColorDim    = "\033[2m"
 )
 
 // 判断是否支持颜色输出
@@ -56,84 +58,74 @@ func colorize(color, text string) string {
 
 // PrintBanner 打印程序横幅
 func PrintBanner() {
-	banner := `
-╔═══════════════════════════════════════════════════════════╗
-║           DMXAPI OpenCode 配置工具                        ║
-║                                                           ║
-║   本工具帮助您快速配置 OpenCode 使用 DMXAPI 服务         ║
-╚═══════════════════════════════════════════════════════════╝
-`
-	fmt.Println(colorize(ColorCyan, banner))
+	fmt.Println()
+	fmt.Printf("  %s DMXAPI OpenCode 配置工具\n", colorize(ColorBold+ColorCyan, "⚡"))
+	fmt.Printf("  %s\n", colorize(ColorDim, "快速配置 OpenCode 使用 DMXAPI 服务"))
+	fmt.Println()
 }
 
 // PrintStep 打印步骤信息
 func PrintStep(step int, message string) {
-	fmt.Printf("%s %s\n", colorize(ColorBlue, fmt.Sprintf("[步骤 %d]", step)), message)
+	fmt.Printf("\n%s %s\n", colorize(ColorCyan, fmt.Sprintf("[%d]", step)), message)
 }
 
 // PrintSuccess 打印成功信息
 func PrintSuccess(message string) {
-	fmt.Println(colorize(ColorGreen, "✓ "+message))
+	fmt.Println(colorize(ColorGreen, "  ✓ "+message))
 }
 
 // PrintError 打印错误信息
 func PrintError(message string) {
-	fmt.Println(colorize(ColorRed, "✗ "+message))
+	fmt.Println(colorize(ColorRed, "  ✗ "+message))
 }
 
 // PrintInfo 打印提示信息
 func PrintInfo(message string) {
-	fmt.Println(colorize(ColorYellow, "→ "+message))
+	fmt.Println(colorize(ColorYellow, "  → "+message))
 }
 
 // PrintWarning 打印警告信息
 func PrintWarning(message string) {
-	fmt.Println(colorize(ColorYellow, "⚠ "+message))
+	fmt.Println(colorize(ColorYellow, "  ⚠ "+message))
 }
 
 // PrintDivider 打印分隔线
 func PrintDivider() {
-	fmt.Println("─────────────────────────────────────────────────────────")
+	fmt.Println()
 }
 
 // PrintSystemInfo 打印系统信息
 func PrintSystemInfo() {
-	fmt.Printf("操作系统: %s (%s)\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("  系统: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 }
 
 // PrintComplete 打印完成信息
 func PrintComplete() {
-	complete := `
-╔═══════════════════════════════════════════════════════════╗
-║                    配置完成！                             ║
-║                                                           ║
-║   现在可以运行 'opencode' 启动程序                       ║
-╚═══════════════════════════════════════════════════════════╝
-`
-	fmt.Println(colorize(ColorGreen, complete))
+	fmt.Println()
+	fmt.Println(colorize(ColorGreen, "  ✓ 配置完成！"))
+	fmt.Printf("  %s\n", colorize(ColorDim, "运行 'opencode' 启动程序"))
+	fmt.Println()
 }
 
 // PrintConfigModeHeader 打印配置模式选择标题
 func PrintConfigModeHeader() {
 	fmt.Println()
-	fmt.Println(colorize(ColorCyan, "=== 配置模式选择 ==="))
-	fmt.Println()
-	fmt.Println("检测到现有配置，请使用 ↑↓ 键选择配置模式:")
+	fmt.Printf("  %s %s\n", colorize(ColorCyan, "⚙"), "检测到现有配置，请选择配置模式：")
 	fmt.Println()
 }
 
 // PrintExistingConfigInfo 显示当前配置信息
 func PrintExistingConfigInfo(url, maskedAPIKey string, models []string) {
 	fmt.Println()
-	fmt.Println(colorize(ColorCyan, "--- 当前配置信息 ---"))
-	fmt.Printf("  URL: %s\n", url)
-	fmt.Printf("  API Key: %s\n", maskedAPIKey)
-	fmt.Printf("  当前模型: %v\n", models)
+	fmt.Printf("  %s 当前配置\n", colorize(ColorCyan, "ℹ"))
+	fmt.Printf("    URL:    %s\n", url)
+	fmt.Printf("    Key:    %s\n", maskedAPIKey)
+	fmt.Printf("    模型:   %v\n", models)
 	fmt.Println()
 }
 
 // PrintModelOnlyModeInfo 打印仅模型模式提示
 func PrintModelOnlyModeInfo() {
 	fmt.Println()
-	PrintInfo("您选择了「仅配置模型」模式")
+	PrintInfo("仅配置模型模式")
 }

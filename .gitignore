@@ -12,6 +12,7 @@ dmxapi-config-macos-amd64
 dmxapi-config-mac
 dmxapi-config-windows.exe
 opencode-dmxapi-*
+opencode_dmxapi-*
 
 # 子目录构建产物
 dmxapi-config/dmxapi-config.exe
