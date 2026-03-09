@@ -96,11 +96,16 @@ func NewDMXAPIConfig(url, apiKey string, models []string) *OpenCodeConfig {
 	providers := make(map[string]Provider)
 	for pType, modelMap := range modelGroups {
 		info := GetProviderInfo(pType)
+		// Google SDK (@ai-sdk/google) 的 baseURL 默认是 /v1beta，直接拼接 /models/{model}:generateContent
+		baseURL := strings.TrimSuffix(url, "/v1") + "/v1"
+		if pType == ProviderGoogle {
+			baseURL = strings.TrimSuffix(url, "/v1") + "/v1beta"
+		}
 		providers[info.ID] = Provider{
 			NPM:  info.NPM,
 			Name: info.Name,
 			Options: ProviderOptions{
-				BaseURL: strings.TrimSuffix(url, "/v1") + "/v1",
+				BaseURL: baseURL,
 				APIKey:  apiKey,
 			},
 			Models: modelMap,
