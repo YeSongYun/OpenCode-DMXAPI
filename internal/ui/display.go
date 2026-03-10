@@ -9,7 +9,7 @@ import (
 )
 
 // Version 版本号常量，方便后续修改
-const Version = "2.0.5"
+const Version = "2.0.6"
 
 // dmxapiASCIIArt DMXAPI 的 block 字符 ASCII Art（需要 Unicode Box Drawing 字符支持）
 const dmxapiASCIIArt = `
