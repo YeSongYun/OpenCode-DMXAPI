@@ -135,7 +135,6 @@ func (c *Collector) CollectURL() (string, error) {
 	err := huh.NewInput().
 		Title("请输入 DMXAPI URL").
 		Description("留空使用默认值: https://www.dmxapi.cn").
-		Placeholder("https://www.dmxapi.cn").
 		Validate(func(s string) error {
 			if s == "" {
 				return nil // 允许空值，后续填默认值

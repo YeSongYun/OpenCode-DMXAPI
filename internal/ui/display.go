@@ -202,7 +202,6 @@ func PrintDivider() {
 func PrintComplete() {
 	fmt.Println()
 	fmt.Println(colorize(ColorGreen, "  "+symbol("✓", "[OK]")+" 配置完成！"))
-	fmt.Printf("  %s\n", colorize(ColorDim, "运行 'opencode' 启动程序"))
 	fmt.Println()
 }
 
