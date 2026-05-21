@@ -7,7 +7,7 @@ main:
   push:
     - runner:
         tags: cnb:arch:amd64
-        cpus: 4
+        cpus: 1
       imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
       stages:
         - name: sync to github with rebase
@@ -18,30 +18,13 @@ main:
             username: ${GIT_USERNAME}
             password: ${GIT_ACCESS_TOKEN}
             sync_mode: rebase
-  pull_request:
-    - name: "AI 代码评审"
-      imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
-      runner:
-        tags: cnb:arch:amd64
-        cpus: 4
-      stages:
-        - name: code-review
-          image: cnbcool/code-review:latest
-          settings:
-            context: 50
-            verbose: true
-            comment: true
-            max_comments: 50
-            max_files: 150
-            max_diff_size: 200000
-            fail_on_critical: true
 
 # Tag 推送 - 自动发布 Release
 $:
   tag_push:
     - runner:
         tags: cnb:arch:amd64
-        cpus: 4
+        cpus: 1
       imports: https://cnb.cool/dmxapi/claude-code-my/-/blob/main/env.yml
       stages:
         # 0. 先同步 Tag 到 GitHub
@@ -61,7 +44,115 @@ $:
           exports:
             stdout: RELEASE_NOTES
 
-        # 2. 编译各平台二进制文件
+        # 2. AI 润色更新日志（调用 dmxapi Anthropic 格式接口）
+        - name: AI 润色更新日志
+          image: cnbcool/default-build-env
+          script:
+            - |
+              # 将 prompt 模板写入临时文件（避免 shell 特殊字符问题）
+              cat > /tmp/ai_prompt.txt << 'PROMPT_EOF'
+              你是一个软件更新日志编辑器。请将以下 git 变更日志改写为面向普通用户的中文更新说明。
+
+              要求：
+              1. 保留版本号和日期
+              2. 用通俗易懂的语言描述每个变更，去掉技术术语
+              3. 保留 emoji 分类图标
+              4. 每条说明控制在一行以内
+              5. 输出必须以 "## " 开头（Markdown 二级标题）
+              6. 只输出改写后的更新日志，不要输出其他内容
+
+              原始变更日志：
+              PROMPT_EOF
+              printf '%s' "${RELEASE_NOTES}" >> /tmp/ai_prompt.txt
+              PROMPT=$(cat /tmp/ai_prompt.txt)
+
+              call_ai() {
+                curl -s -w "\n%{http_code}" "${AI_API_URL}/v1/messages" \
+                  -H "Content-Type: application/json" \
+                  -H "x-api-key: ${AI_API_KEY}" \
+                  -H "anthropic-version: 2023-06-01" \
+                  -d "$(jq -n \
+                    --arg model "${AI_MODEL}" \
+                    --arg prompt "${PROMPT}" \
+                    '{model: $model, max_tokens: 4096, messages: [{role: "user", content: $prompt}]}')"
+              }
+
+              RESPONSE=$(call_ai)
+              HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+              BODY=$(echo "$RESPONSE" | sed '$d')
+
+              # 重试逻辑
+              if [ "$HTTP_CODE" != "200" ]; then
+                echo "AI API 首次调用失败 (HTTP $HTTP_CODE)，3 秒后重试..." >&2
+                sleep 3
+                RESPONSE=$(call_ai)
+                HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+                BODY=$(echo "$RESPONSE" | sed '$d')
+              fi
+
+              # 提取 AI 输出并校验格式
+              if [ "$HTTP_CODE" = "200" ]; then
+                AI_TEXT=$(echo "$BODY" | jq -r '.content[0].text // empty')
+                AI_LEN=${#AI_TEXT}
+                if echo "$AI_TEXT" | head -1 | grep -q '^## ' && [ "$AI_LEN" -le 10000 ]; then
+                  echo "$AI_TEXT"
+                  exit 0
+                fi
+                echo "AI 输出格式验证失败（长度=${AI_LEN}），使用原始日志" >&2
+              else
+                echo "AI API 调用失败 (HTTP $HTTP_CODE)，使用原始日志" >&2
+              fi
+
+              # 回退：输出原始 RELEASE_NOTES
+              echo "${RELEASE_NOTES}"
+          exports:
+            stdout: AI_RELEASE_NOTES
+
+        # 3. 更新 CHANGELOG.md 并推送回 main
+        - name: 更新 CHANGELOG.md
+          image: cnbcool/default-build-env
+          script:
+            - |
+              if [ -z "${AI_RELEASE_NOTES}" ]; then
+                echo "AI_RELEASE_NOTES 为空，跳过 CHANGELOG 更新" >&2
+                exit 0
+              fi
+
+              git config user.name "CNB Bot"
+              git config user.email "bot@cnb.cool"
+
+              # 基于 origin/main 创建临时分支（避免 detached HEAD）
+              git fetch origin main
+              git checkout -b temp-changelog origin/main
+
+              # 找到第一个 "## " 标题的行号
+              FIRST_HEADING=$(grep -n '^## ' CHANGELOG.md | head -1 | cut -d: -f1)
+
+              if [ -n "$FIRST_HEADING" ]; then
+                head -n $((FIRST_HEADING - 1)) CHANGELOG.md > /tmp/changelog_header.md
+                tail -n +${FIRST_HEADING} CHANGELOG.md > /tmp/changelog_body.md
+
+                cat /tmp/changelog_header.md > CHANGELOG.md
+                echo "" >> CHANGELOG.md
+                echo "${AI_RELEASE_NOTES}" >> CHANGELOG.md
+                echo "" >> CHANGELOG.md
+                cat /tmp/changelog_body.md >> CHANGELOG.md
+              else
+                echo "" >> CHANGELOG.md
+                echo "${AI_RELEASE_NOTES}" >> CHANGELOG.md
+              fi
+
+              git add CHANGELOG.md
+              git commit -m "docs: update CHANGELOG.md for ${CNB_BRANCH}"
+              ORIGIN_URL=$(git remote get-url origin)
+              ORIGIN_WITH_CREDS=$(echo "$ORIGIN_URL" | sed "s|https://|https://${GIT_USERNAME}:${GIT_ACCESS_TOKEN}@|")
+              git remote set-url origin "$ORIGIN_WITH_CREDS"
+              if ! git push origin temp-changelog:main; then
+                echo "推送 CHANGELOG.md 到 main 失败（可能存在并发冲突），跳过本次更新" >&2
+                exit 0
+              fi
+
+        # 4. 编译各平台二进制文件
         - name: 编译 Windows AMD64
           image: golang:latest
           script:
@@ -87,7 +178,7 @@ $:
           script:
             - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-macos-arm64
 
-        # 3. 先创建 Release（必须在上传附件之前）
+        # 5. 先创建 Release（必须在上传附件之前）
         - name: 创建 Release
           type: git:release
           options:
@@ -99,7 +190,7 @@ $:
 
               ---
 
-              ${RELEASE_NOTES}
+              ${AI_RELEASE_NOTES}
 
               ---
 
@@ -158,7 +249,7 @@ $:
               - [获取 API Token](https://www.dmxapi.cn/token)
               - [使用文档](https://cnb.cool/dmxapi/opencode_dmxapi)
 
-        # 4. 再上传附件到已创建的 Release
+        # 6. 再上传附件到已创建的 Release
         - name: 上传 Release 附件
           image: cnbcool/attachments
           settings:
@@ -166,7 +257,7 @@ $:
               - "./opencode-dmxapi-${CNB_BRANCH}-*"
             ttl: 0
 
-        # 5. 清理旧版本，只保留最近3个
+        # 7. 清理旧版本，只保留最近3个
         - name: 清理旧版本
           image: docker.cnb.cool/cnb/plugins/cnbcool/release-clean:latest
           settings:
