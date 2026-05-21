@@ -23,51 +23,26 @@
 | macOS | macOS 11 (Big Sur) 及以上，支持 Intel 与 Apple Silicon |
 | Linux | glibc 2.17+，支持 x64 与 ARM64 |
 
-> **注意**：macOS 用户首次运行未签名二进制需执行 `xattr -dr com.apple.quarantine <文件名>` 移除 Gatekeeper 隔离属性。
+## ⚡ 快速安装（推荐）
 
-## 下载安装
+无需手动下载，一行命令完成安装并自动启动配置。
 
-| 平台 | 文件名 | 架构 |
-|------|--------|------|
-| Windows | `opencode-dmxapi-<版本>-windows-amd64.exe` | x64 |
-| macOS (Intel) | `opencode-dmxapi-<版本>-macos-amd64` | x64 |
-| macOS (Apple Silicon) | `opencode-dmxapi-<版本>-macos-arm64` | ARM64 |
-| Linux (x64) | `opencode-dmxapi-<版本>-linux-amd64` | x64 |
-| Linux (ARM64) | `opencode-dmxapi-<版本>-linux-arm64` | ARM64 |
+### Linux / macOS
 
-## 快速开始
+```bash
+curl -fsSL https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.sh | bash
+```
 
-### Windows
+### Windows PowerShell
 
 ```powershell
-# 下载后直接运行
-.\opencode-dmxapi-<版本>-windows-amd64.exe
+iwr -useb https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.ps1 | iex
 ```
 
-### macOS (Intel)
+### Windows CMD
 
-```bash
-chmod +x opencode-dmxapi-<版本>-macos-amd64
-# 移除 Gatekeeper 隔离属性（首次运行需要）
-xattr -dr com.apple.quarantine opencode-dmxapi-<版本>-macos-amd64
-./opencode-dmxapi-<版本>-macos-amd64
-```
-
-### macOS (Apple Silicon)
-
-```bash
-chmod +x opencode-dmxapi-<版本>-macos-arm64
-# 移除 Gatekeeper 隔离属性（首次运行需要）
-xattr -dr com.apple.quarantine opencode-dmxapi-<版本>-macos-arm64
-./opencode-dmxapi-<版本>-macos-arm64
-```
-
-### Linux
-
-```bash
-chmod +x opencode-dmxapi-<版本>-linux-amd64
-./opencode-dmxapi-<版本>-linux-amd64
-# ARM64 用户将 amd64 替换为 arm64
+```cmd
+curl -fsSL https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.cmd -o "%TEMP%\install.cmd" && call "%TEMP%\install.cmd"
 ```
 
 运行后按提示操作：
