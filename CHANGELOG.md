@@ -3,7 +3,7 @@
 本文件记录 opencode_dmxapi 各版本变更，遵循 [Conventional Commits](https://www.conventionalcommits.org/) 与 `cliff.toml` 分组约定。
 
 
-## v2.0.7 (2024-01-15)
+## v2.0.7 (2026-05-21)
 ### ✨ 新功能
 - 发布新版本时，系统会自动用AI优化更新说明，让描述更友好易懂
 ### 🐛 修复
