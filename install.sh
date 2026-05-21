@@ -79,7 +79,11 @@ main() {
 
   info "启动配置..."
   echo
-  "$bin_path"
+  if [ -r /dev/tty ]; then
+    "$bin_path" < /dev/tty
+  else
+    "$bin_path"
+  fi
 }
 
 main "$@"
