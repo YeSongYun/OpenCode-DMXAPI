@@ -2,6 +2,7 @@ package config
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -146,11 +147,12 @@ func NewAuthConfig(providerIDs []string, apiKey string) AuthConfig {
 	return authConfig
 }
 
-// GetProviderIDs 从配置中提取所有 provider ID
+// GetProviderIDs 从配置中提取所有 provider ID（按字典序排序，保证 auth.json 写入稳定）
 func GetProviderIDs(config *OpenCodeConfig) []string {
 	var ids []string
 	for id := range config.Provider {
 		ids = append(ids, id)
 	}
+	sort.Strings(ids)
 	return ids
 }

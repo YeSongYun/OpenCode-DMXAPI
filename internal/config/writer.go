@@ -2,11 +2,16 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
+
+// maxBackupsPerFile 限制单个目标文件保留的备份份数，避免长期使用堆积无数 .backup.*
+const maxBackupsPerFile = 5
 
 // Writer 配置文件写入器
 type Writer struct{}
@@ -33,6 +38,7 @@ func (w *Writer) WriteConfig(config *OpenCodeConfig) (string, error) {
 		// 备份失败不阻止写入，只打印警告
 		fmt.Printf("警告: 备份现有配置失败: %v\n", err)
 	}
+	w.pruneOldBackups(configPath)
 
 	// 合并现有配置（使用 map 保留未知字段）
 	merged, err := w.mergeConfigPreservingFields(configPath, config)
@@ -71,6 +77,7 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 	if err := w.backupIfExists(authPath); err != nil {
 		fmt.Printf("警告: 备份现有认证配置失败: %v\n", err)
 	}
+	w.pruneOldBackups(authPath)
 
 	// 读取并合并现有认证配置
 	existingAuth := w.readExistingAuth(authPath)
@@ -123,28 +130,31 @@ func (w *Writer) backupIfExists(filePath string) error {
 	return nil
 }
 
-// mergeConfigPreservingFields 使用 map[string]interface{} 合并配置，保留 JSON 中的所有字段
+// mergeConfigPreservingFields 使用 map[string]interface{} 合并配置，保留 JSON 中的所有字段。
+// 读取或解析失败时返回错误，避免静默覆盖现有 opencode.json。备份已在调用前写出，
+// 用户可从备份恢复后再修复源文件。
 func (w *Writer) mergeConfigPreservingFields(filePath string, newConfig *OpenCodeConfig) (interface{}, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		// 文件不存在，直接返回新配置
-		return newConfig, nil
+		if errors.Is(err, os.ErrNotExist) {
+			return newConfig, nil
+		}
+		return nil, fmt.Errorf("读取现有配置失败: %w", err)
 	}
 
 	var existing map[string]interface{}
 	if err := json.Unmarshal(data, &existing); err != nil {
-		// 解析失败，直接使用新配置
-		return newConfig, nil
+		return nil, fmt.Errorf("解析现有配置失败（已备份原文件，请检查 %s 后重试）: %w", filePath, err)
 	}
 
 	// 将新配置序列化再反序列化为 map，以便合并
 	newData, err := json.Marshal(newConfig)
 	if err != nil {
-		return newConfig, nil
+		return nil, fmt.Errorf("序列化新配置失败: %w", err)
 	}
 	var newMap map[string]interface{}
 	if err := json.Unmarshal(newData, &newMap); err != nil {
-		return newConfig, nil
+		return nil, fmt.Errorf("反序列化新配置失败: %w", err)
 	}
 
 	// 合并：新配置的 provider 覆盖到现有 map 中
@@ -177,4 +187,20 @@ func (w *Writer) readExistingAuth(filePath string) AuthConfig {
 	}
 
 	return auth
+}
+
+// pruneOldBackups 仅保留 filePath 对应的最近 maxBackupsPerFile 份 .backup.* 文件，
+// 删除更早的备份，避免长期使用堆积无数备份占用磁盘。失败时仅输出警告。
+func (w *Writer) pruneOldBackups(filePath string) {
+	matches, err := filepath.Glob(filePath + ".backup.*")
+	if err != nil || len(matches) <= maxBackupsPerFile {
+		return
+	}
+	// 时间戳格式 20060102_150405 字典序即时间序，升序排序后删除最旧的若干份
+	sort.Strings(matches)
+	for _, p := range matches[:len(matches)-maxBackupsPerFile] {
+		if err := os.Remove(p); err != nil {
+			fmt.Printf("警告: 清理旧备份失败 %s: %v\n", p, err)
+		}
+	}
 }

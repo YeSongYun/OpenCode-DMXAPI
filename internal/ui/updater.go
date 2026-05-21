@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -47,7 +48,11 @@ func checkUpdate() UpdateResult {
 	var releases []struct {
 		TagName string `json:"tag_name"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return UpdateResult{}
+	}
+	if err := json.Unmarshal(body, &releases); err != nil {
 		return UpdateResult{}
 	}
 

@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -66,6 +67,7 @@ func (r *Reader) ReadExistingConfig() *ExistingConfig {
 		return nil
 	}
 
+	sort.Strings(models)
 	url = NormalizeBaseURL(url)
 
 	return &ExistingConfig{

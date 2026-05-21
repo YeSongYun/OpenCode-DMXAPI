@@ -205,13 +205,14 @@ func PrintComplete() {
 	fmt.Println()
 }
 
-// PrintExistingConfigInfo 显示当前配置信息
+// PrintExistingConfigInfo 显示当前配置信息。
+// 标签使用显示宽度对齐："URL"/"Key" 为 3 列、"模型" 为 4 列，配合不同空格数让冒号位列对齐。
 func PrintExistingConfigInfo(url, maskedAPIKey string, models []string) {
 	fmt.Println()
 	fmt.Printf("  %s 检测到现有 DMXAPI 配置\n", colorize(ColorCyan, symbol("⚙", "[*]")))
-	fmt.Printf("    %-6s  %s\n", "URL:", url)
-	fmt.Printf("    %-6s  %s\n", "Key:", maskedAPIKey)
-	fmt.Printf("    %-6s  %s\n", "模型:", strings.Join(models, ", "))
+	fmt.Printf("    URL    %s\n", url)
+	fmt.Printf("    Key    %s\n", maskedAPIKey)
+	fmt.Printf("    模型   %s\n", strings.Join(models, ", "))
 	fmt.Println()
 }
 
