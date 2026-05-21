@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# DMXAPI 配置工具一键安装脚本 (Linux / macOS)
+# 用法: curl -fsSL https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.sh | bash
+
+set -euo pipefail
+
+REPO="dmxapi/opencode_dmxapi"
+RELEASES_API="https://cnb.cool/${REPO}/-/releases"
+BIN_PREFIX="opencode-dmxapi"
+
+color() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
+info()  { color "1;36" "==> $*"; }
+warn()  { color "1;33" "!! $*"; }
+err()   { color "1;31" "✖ $*" >&2; }
+
+# --- 检测 OS / ARCH ---
+detect_platform() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  case "$os" in
+    Linux)  os="linux" ;;
+    Darwin) os="macos" ;;
+    *) err "不支持的操作系统: $os"; exit 1 ;;
+  esac
+  case "$arch" in
+    x86_64|amd64) arch="amd64" ;;
+    arm64|aarch64) arch="arm64" ;;
+    *) err "不支持的架构: $arch"; exit 1 ;;
+  esac
+  echo "${os}-${arch}"
+}
+
+# --- 获取最新 tag ---
+fetch_latest_tag() {
+  local json tag
+  if ! json="$(curl -fsSL -H 'Accept: application/json' "$RELEASES_API")"; then
+    err "无法访问 $RELEASES_API"
+    exit 1
+  fi
+  tag="$(printf '%s' "$json" | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/')"
+  if [ -z "$tag" ]; then
+    err "无法解析最新版本号"
+    exit 1
+  fi
+  echo "$tag"
+}
+
+main() {
+  command -v curl >/dev/null 2>&1 || { err "需要 curl"; exit 1; }
+
+  info "检测平台..."
+  local platform tag asset url tmp_dir bin_path
+  platform="$(detect_platform)"
+  info "平台: $platform"
+
+  info "获取最新版本..."
+  tag="$(fetch_latest_tag)"
+  info "版本: $tag"
+
+  asset="${BIN_PREFIX}-${tag}-${platform}"
+  url="https://cnb.cool/${REPO}/-/releases/download/${tag}/${asset}"
+
+  tmp_dir="$(mktemp -d -t dmxapi-XXXXXX)"
+  trap 'rm -rf "$tmp_dir"' EXIT
+  bin_path="${tmp_dir}/${asset}"
+
+  info "下载 $asset ..."
+  if ! curl -fL --progress-bar -o "$bin_path" "$url"; then
+    err "下载失败: $url"
+    err "请确认 release 资产已发布，或访问 $RELEASES_API 手动下载"
+    exit 1
+  fi
+
+  chmod +x "$bin_path"
+  if [ "$(uname -s)" = "Darwin" ]; then
+    xattr -dr com.apple.quarantine "$bin_path" 2>/dev/null || true
+  fi
+
+  info "启动配置..."
+  echo
+  "$bin_path"
+}
+
+main "$@"
