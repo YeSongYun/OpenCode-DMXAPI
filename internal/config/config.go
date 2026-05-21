@@ -52,7 +52,7 @@ func GetProviderInfo(pType ProviderType) ProviderInfo {
 // ClassifyModel 根据模型名称前缀判断 provider 类型
 func ClassifyModel(modelName string) ProviderType {
 	name := strings.ToLower(modelName)
-	if strings.HasPrefix(name, "claude") {
+	if strings.HasPrefix(name, "claude") || strings.HasSuffix(name, "-cc") {
 		return ProviderAnthropic
 	}
 	if strings.HasPrefix(name, "gemini") {
