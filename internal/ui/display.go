@@ -205,13 +205,6 @@ func PrintComplete() {
 	fmt.Println()
 }
 
-// PrintConfigModeHeader 打印配置模式选择标题
-func PrintConfigModeHeader() {
-	fmt.Println()
-	fmt.Printf("  %s %s\n", colorize(ColorCyan, symbol("⚙", "[*]")), "请选择配置模式：")
-	fmt.Println()
-}
-
 // PrintExistingConfigInfo 显示当前配置信息
 func PrintExistingConfigInfo(url, maskedAPIKey string, models []string) {
 	fmt.Println()

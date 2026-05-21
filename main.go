@@ -71,7 +71,6 @@ func main() {
 
 	if existingConfig != nil {
 		ui.PrintExistingConfigInfo(existingConfig.URL, config.MaskAPIKey(existingConfig.APIKey), existingConfig.Models)
-		ui.PrintConfigModeHeader()
 
 		mode, err := collector.CollectConfigMode()
 		if err != nil {

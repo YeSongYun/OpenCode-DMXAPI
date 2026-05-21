@@ -215,7 +215,6 @@ func (c *Collector) CollectModels() ([]string, error) {
 	err := huh.NewInput().
 		Title("请输入模型名称，多个用逗号分隔").
 		Description("可用模型: https://www.dmxapi.cn/rmb").
-		Placeholder("claude-opus-4-5-20251101,DeepSeek-V3.2-Fast").
 		Validate(func(s string) error {
 			return ValidateModels(parseModels(s))
 		}).
