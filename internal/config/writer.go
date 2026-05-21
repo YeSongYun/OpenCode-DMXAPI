@@ -7,8 +7,15 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
+
+// isManagedProviderKey 判断 key 是否属于本工具管理的 dmxapi 命名空间。
+// 仅这些 key 在写入新配置时会被清理；用户手动添加的其他 provider 不受影响。
+func isManagedProviderKey(key string) bool {
+	return key == "dmxapi" || strings.HasPrefix(key, "dmxapi-")
+}
 
 // maxBackupsPerFile 限制单个目标文件保留的备份份数，避免长期使用堆积无数 .backup.*
 const maxBackupsPerFile = 5
@@ -79,9 +86,15 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 	}
 	w.pruneOldBackups(authPath)
 
-	// 读取并合并现有认证配置
+	// 读取并合并现有认证配置。清理本工具管理的 dmxapi/dmxapi-* 命名空间，
+	// 避免切换模型组合后旧 provider 的 key 残留在 auth.json 中。
 	existingAuth := w.readExistingAuth(authPath)
 	if existingAuth != nil {
+		for k := range existingAuth {
+			if isManagedProviderKey(k) {
+				delete(existingAuth, k)
+			}
+		}
 		for k, v := range authConfig {
 			existingAuth[k] = v
 		}
@@ -157,11 +170,17 @@ func (w *Writer) mergeConfigPreservingFields(filePath string, newConfig *OpenCod
 		return nil, fmt.Errorf("反序列化新配置失败: %w", err)
 	}
 
-	// 合并：新配置的 provider 覆盖到现有 map 中
+	// 合并：先清理本工具管理的 dmxapi/dmxapi-* 命名空间，再写入新 provider。
+	// 这样切换模型组合时不会残留上一次写入的过期 provider；其他用户自定义 provider 保留。
 	if newProvider, ok := newMap["provider"]; ok {
 		existingProvider, _ := existing["provider"].(map[string]interface{})
 		if existingProvider == nil {
 			existingProvider = make(map[string]interface{})
+		}
+		for k := range existingProvider {
+			if isManagedProviderKey(k) {
+				delete(existingProvider, k)
+			}
 		}
 		if np, ok := newProvider.(map[string]interface{}); ok {
 			for k, v := range np {

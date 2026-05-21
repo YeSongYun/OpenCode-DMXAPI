@@ -163,8 +163,10 @@ func (c *Collector) collectURLFallback() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := ValidateURL(rawURL); rawURL != "https://www.dmxapi.cn" && err != nil {
-		return "", err
+	if rawURL != "https://www.dmxapi.cn" {
+		if err := ValidateURL(rawURL); err != nil {
+			return "", err
+		}
 	}
 	return strings.TrimSuffix(rawURL, "/"), nil
 }

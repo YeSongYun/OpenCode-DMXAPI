@@ -38,6 +38,7 @@ func checkUpdate() UpdateResult {
 		return UpdateResult{}
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "opencode-dmxapi/"+Version)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -91,7 +92,9 @@ func isNewerVersion(latest, current string) bool {
 	return false
 }
 
-// parseSemver 将 "x.y.z" 解析为 [3]int。任一段无法解析时返回 ok=false。
+// parseSemver 将 "x.y.z" 解析为 [3]int。
+// 容忍预发布/构建元数据后缀（如 "2.1.0-beta.1"、"2.1.0+sha"）：每段只取前导数字。
+// 任一段缺少前导数字时返回 ok=false。
 func parseSemver(s string) ([3]int, bool) {
 	var out [3]int
 	parts := strings.SplitN(s, ".", 3)
@@ -99,7 +102,15 @@ func parseSemver(s string) ([3]int, bool) {
 		return out, false
 	}
 	for i := 0; i < 3 && i < len(parts); i++ {
-		n, err := strconv.Atoi(strings.TrimSpace(parts[i]))
+		seg := strings.TrimSpace(parts[i])
+		end := strings.IndexFunc(seg, func(r rune) bool { return r < '0' || r > '9' })
+		if end == 0 {
+			return out, false
+		}
+		if end > 0 {
+			seg = seg[:end]
+		}
+		n, err := strconv.Atoi(seg)
 		if err != nil {
 			return out, false
 		}

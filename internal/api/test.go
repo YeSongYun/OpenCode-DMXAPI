@@ -26,11 +26,11 @@ type Message struct {
 
 // ChatResponse 聊天响应结构
 type ChatResponse struct {
-	ID      string   `json:"id"`
-	Object  string   `json:"object"`
-	Created int64    `json:"created"`
-	Model   string   `json:"model"`
-	Choices []Choice `json:"choices"`
+	ID      string    `json:"id"`
+	Object  string    `json:"object"`
+	Created int64     `json:"created"`
+	Model   string    `json:"model"`
+	Choices []Choice  `json:"choices"`
 	Error   *APIError `json:"error,omitempty"`
 }
 
@@ -89,74 +89,6 @@ type AnthropicError struct {
 	Message string `json:"message"`
 }
 
-// TestConnection 测试API连接
-// 使用用户指定的 model 发送一个简单请求，验证 API Key 和 URL 是否有效
-func (t *Tester) TestConnection(model string) error {
-	switch config.ClassifyModel(model) {
-	case config.ProviderAnthropic:
-		return t.testAnthropicConnection(model)
-	case config.ProviderGoogle:
-		return t.testGoogleConnection(model)
-	case config.ProviderOpenAIResponses:
-		return t.testOpenAIResponsesConnection(model)
-	default:
-		return t.testOpenAIConnection(model)
-	}
-}
-
-// testAnthropicConnection 使用 Anthropic Messages API 测试连接
-func (t *Tester) testAnthropicConnection(model string) error {
-	req := AnthropicRequest{
-		Model:     model,
-		MaxTokens: 10,
-		Messages:  []Message{{Role: "user", Content: "Hi"}},
-	}
-
-	jsonData, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("序列化请求失败: %w", err)
-	}
-
-	url := t.baseURL + "/v1/messages"
-	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
-
-	resp, err := t.client.Do(httpReq)
-	if err != nil {
-		return fmt.Errorf("发送请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return fmt.Errorf("读取响应失败: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		var anthResp AnthropicResponse
-		if json.Unmarshal(body, &anthResp) == nil && anthResp.Error != nil {
-			return fmt.Errorf("API错误 (%d): %s", resp.StatusCode, anthResp.Error.Message)
-		}
-		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
-	}
-
-	var anthResp AnthropicResponse
-	if err := json.Unmarshal(body, &anthResp); err != nil {
-		return fmt.Errorf("解析响应失败: %w", err)
-	}
-
-	if len(anthResp.Content) == 0 {
-		return fmt.Errorf("API响应无效：没有返回任何内容")
-	}
-
-	return nil
-}
-
 // GeminiRequest Google Generative Language API 请求结构
 type GeminiRequest struct {
 	Contents []GeminiContent `json:"contents"`
@@ -203,163 +135,159 @@ type OpenAIResponsesResponse struct {
 	Error *APIError `json:"error,omitempty"`
 }
 
-// testGoogleConnection 使用 Google Generative Language API 测试连接
-// URL 格式与 opencode 配置中 @ai-sdk/google baseURL(url+"/v1beta") 一致：
-// {baseURL}/v1beta/models/{model}:generateContent
-func (t *Tester) testGoogleConnection(model string) error {
-	req := GeminiRequest{
-		Contents: []GeminiContent{
-			{Parts: []GeminiPart{{Text: "Hi"}}},
-		},
+// TestConnection 测试API连接
+// 使用用户指定的 model 发送一个简单请求，验证 API Key 和 URL 是否有效
+func (t *Tester) TestConnection(model string) error {
+	switch config.ClassifyModel(model) {
+	case config.ProviderAnthropic:
+		return t.testAnthropicConnection(model)
+	case config.ProviderGoogle:
+		return t.testGoogleConnection(model)
+	case config.ProviderOpenAIResponses:
+		return t.testOpenAIResponsesConnection(model)
+	default:
+		return t.testOpenAIConnection(model)
 	}
+}
 
-	jsonData, err := json.Marshal(req)
+// doRequest 发送 POST JSON 请求，返回状态码与响应体（限制 1MiB）。
+// 请求体序列化、Bearer 认证、超时、响应读取的公共逻辑集中在此。
+func (t *Tester) doRequest(reqURL string, body any) (int, []byte, error) {
+	jsonData, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("序列化请求失败: %w", err)
+		return 0, nil, fmt.Errorf("序列化请求失败: %w", err)
 	}
-
-	reqURL := fmt.Sprintf("%s/v1beta/models/%s:generateContent", t.baseURL, url.PathEscape(model))
 	httpReq, err := http.NewRequest("POST", reqURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
+		return 0, nil, fmt.Errorf("创建请求失败: %w", err)
 	}
-
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
 
 	resp, err := t.client.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("发送请求失败: %w", err)
+		return 0, nil, fmt.Errorf("发送请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return fmt.Errorf("读取响应失败: %w", err)
+		return resp.StatusCode, nil, fmt.Errorf("读取响应失败: %w", err)
+	}
+	return resp.StatusCode, raw, nil
+}
+
+// testAnthropicConnection 使用 Anthropic Messages API 测试连接
+func (t *Tester) testAnthropicConnection(model string) error {
+	status, body, err := t.doRequest(t.baseURL+"/v1/messages", AnthropicRequest{
+		Model:     model,
+		MaxTokens: 10,
+		Messages:  []Message{{Role: "user", Content: "Hi"}},
+	})
+	if err != nil {
+		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		var geminiResp GeminiResponse
-		if json.Unmarshal(body, &geminiResp) == nil && geminiResp.Error != nil {
-			return fmt.Errorf("API错误 (%d): %s", resp.StatusCode, geminiResp.Error.Message)
+	if status != http.StatusOK {
+		var resp AnthropicResponse
+		if json.Unmarshal(body, &resp) == nil && resp.Error != nil {
+			return fmt.Errorf("API错误 (%d): %s", status, resp.Error.Message)
 		}
-		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", status, string(body))
 	}
 
-	var geminiResp GeminiResponse
-	if err := json.Unmarshal(body, &geminiResp); err != nil {
+	var resp AnthropicResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
 		return fmt.Errorf("解析响应失败: %w", err)
 	}
+	if len(resp.Content) == 0 {
+		return fmt.Errorf("API响应无效：没有返回任何内容")
+	}
+	return nil
+}
 
-	if len(geminiResp.Candidates) == 0 {
-		return fmt.Errorf("API响应无效：没有返回任何 candidates")
+// testGoogleConnection 使用 Google Generative Language API 测试连接
+// URL 格式与 opencode 配置中 @ai-sdk/google baseURL(url+"/v1beta") 一致：
+// {baseURL}/v1beta/models/{model}:generateContent
+func (t *Tester) testGoogleConnection(model string) error {
+	reqURL := fmt.Sprintf("%s/v1beta/models/%s:generateContent", t.baseURL, url.PathEscape(model))
+	status, body, err := t.doRequest(reqURL, GeminiRequest{
+		Contents: []GeminiContent{{Parts: []GeminiPart{{Text: "Hi"}}}},
+	})
+	if err != nil {
+		return err
 	}
 
+	if status != http.StatusOK {
+		var resp GeminiResponse
+		if json.Unmarshal(body, &resp) == nil && resp.Error != nil {
+			return fmt.Errorf("API错误 (%d): %s", status, resp.Error.Message)
+		}
+		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", status, string(body))
+	}
+
+	var resp GeminiResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return fmt.Errorf("解析响应失败: %w", err)
+	}
+	if len(resp.Candidates) == 0 {
+		return fmt.Errorf("API响应无效：没有返回任何 candidates")
+	}
 	return nil
 }
 
 // testOpenAIResponsesConnection 使用 OpenAI Responses API 测试连接
 func (t *Tester) testOpenAIResponsesConnection(model string) error {
-	req := OpenAIResponsesRequest{
+	status, body, err := t.doRequest(t.baseURL+"/v1/responses", OpenAIResponsesRequest{
 		Model: model,
 		Input: "Hi",
-	}
-
-	jsonData, err := json.Marshal(req)
+	})
 	if err != nil {
-		return fmt.Errorf("序列化请求失败: %w", err)
+		return err
 	}
 
-	url := t.baseURL + "/v1/responses"
-	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
-
-	resp, err := t.client.Do(httpReq)
-	if err != nil {
-		return fmt.Errorf("发送请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return fmt.Errorf("读取响应失败: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		var respErr OpenAIResponsesResponse
-		if json.Unmarshal(body, &respErr) == nil && respErr.Error != nil {
-			return fmt.Errorf("API错误 (%d): %s", resp.StatusCode, respErr.Error.Message)
+	if status != http.StatusOK {
+		var resp OpenAIResponsesResponse
+		if json.Unmarshal(body, &resp) == nil && resp.Error != nil {
+			return fmt.Errorf("API错误 (%d): %s", status, resp.Error.Message)
 		}
-		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", status, string(body))
 	}
 
-	var responsesResp OpenAIResponsesResponse
-	if err := json.Unmarshal(body, &responsesResp); err != nil {
+	var resp OpenAIResponsesResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
 		return fmt.Errorf("解析响应失败: %w", err)
 	}
-
-	if len(responsesResp.Output) == 0 {
+	if len(resp.Output) == 0 {
 		return fmt.Errorf("API响应无效：没有返回任何输出")
 	}
-
 	return nil
 }
 
 // testOpenAIConnection 使用 OpenAI Chat Completions API 测试连接
 func (t *Tester) testOpenAIConnection(model string) error {
-	req := ChatRequest{
-		Model: model,
-		Messages: []Message{
-			{Role: "user", Content: "Hi"},
-		},
-	}
-
-	jsonData, err := json.Marshal(req)
+	status, body, err := t.doRequest(t.baseURL+"/v1/chat/completions", ChatRequest{
+		Model:    model,
+		Messages: []Message{{Role: "user", Content: "Hi"}},
+	})
 	if err != nil {
-		return fmt.Errorf("序列化请求失败: %w", err)
+		return err
 	}
 
-	url := t.baseURL + "/v1/chat/completions"
-	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
-
-	resp, err := t.client.Do(httpReq)
-	if err != nil {
-		return fmt.Errorf("发送请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return fmt.Errorf("读取响应失败: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		var chatResp ChatResponse
-		if json.Unmarshal(body, &chatResp) == nil && chatResp.Error != nil {
-			return fmt.Errorf("API错误 (%d): %s", resp.StatusCode, chatResp.Error.Message)
+	if status != http.StatusOK {
+		var resp ChatResponse
+		if json.Unmarshal(body, &resp) == nil && resp.Error != nil {
+			return fmt.Errorf("API错误 (%d): %s", status, resp.Error.Message)
 		}
-		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API请求失败，状态码: %d, 响应: %s", status, string(body))
 	}
 
-	var chatResp ChatResponse
-	if err := json.Unmarshal(body, &chatResp); err != nil {
+	var resp ChatResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
 		return fmt.Errorf("解析响应失败: %w", err)
 	}
-
-	if len(chatResp.Choices) == 0 {
+	if len(resp.Choices) == 0 {
 		return fmt.Errorf("API响应无效：没有返回任何内容")
 	}
-
 	return nil
 }
