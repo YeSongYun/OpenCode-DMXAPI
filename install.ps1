@@ -8,6 +8,7 @@ $ReleasesApi = "https://cnb.cool/$Repo/-/releases"
 $BinPrefix   = 'opencode-dmxapi'
 
 function Write-Info($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
+function Write-Warn($msg) { Write-Host "!! $msg"  -ForegroundColor Yellow }
 function Write-Err ($msg) { Write-Host "X $msg"   -ForegroundColor Red }
 
 function Get-Arch {
@@ -68,6 +69,26 @@ try {
         Write-Err "下载失败: $url"
         Write-Err "请确认 release 资产已发布，或访问 $ReleasesApi 手动下载"
         exit 1
+    }
+
+    # 可选 SHA256 校验：老 release 可能不带 .sha256，下载失败则跳过
+    $shaUrl  = "$url.sha256"
+    $shaPath = "$binPath.sha256"
+    $shaOk = $false
+    try {
+        Invoke-WebRequest -Uri $shaUrl -OutFile $shaPath -UseBasicParsing -ErrorAction Stop
+        $shaOk = $true
+    } catch {
+        Write-Warn '未找到 SHA256 校验文件，跳过完整性校验（向后兼容旧 release）'
+    }
+    if ($shaOk) {
+        $expected = (Get-Content $shaPath -Raw).Trim().Split()[0]
+        $actual   = (Get-FileHash -Path $binPath -Algorithm SHA256).Hash.ToLower()
+        if ($expected.ToLower() -ne $actual) {
+            Write-Err "SHA256 校验失败！期望 $expected，实际 $actual"
+            exit 1
+        }
+        Write-Info 'SHA256 校验通过'
     }
 
     Write-Info '启动配置...'

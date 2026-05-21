@@ -158,30 +158,48 @@ $:
               fi
 
         # 4. 编译各平台二进制文件
+        # 通过 ldflags 注入版本号（去掉 v 前缀），与 updater.go 的版本比较保持一致
         - name: 编译 Windows AMD64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
+            - VERSION="${CNB_BRANCH#v}"
+            - CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=${VERSION}'" -o opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe
+            - sha256sum opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe | awk '{print $1}' > opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe.sha256
+
+        - name: 编译 Windows ARM64
+          image: golang:latest
+          script:
+            - VERSION="${CNB_BRANCH#v}"
+            - CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=${VERSION}'" -o opencode-dmxapi-${CNB_BRANCH}-windows-arm64.exe
+            - sha256sum opencode-dmxapi-${CNB_BRANCH}-windows-arm64.exe | awk '{print $1}' > opencode-dmxapi-${CNB_BRANCH}-windows-arm64.exe.sha256
 
         - name: 编译 Linux AMD64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-linux-amd64
+            - VERSION="${CNB_BRANCH#v}"
+            - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=${VERSION}'" -o opencode-dmxapi-${CNB_BRANCH}-linux-amd64
+            - sha256sum opencode-dmxapi-${CNB_BRANCH}-linux-amd64 | awk '{print $1}' > opencode-dmxapi-${CNB_BRANCH}-linux-amd64.sha256
 
         - name: 编译 Linux ARM64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-linux-arm64
+            - VERSION="${CNB_BRANCH#v}"
+            - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=${VERSION}'" -o opencode-dmxapi-${CNB_BRANCH}-linux-arm64
+            - sha256sum opencode-dmxapi-${CNB_BRANCH}-linux-arm64 | awk '{print $1}' > opencode-dmxapi-${CNB_BRANCH}-linux-arm64.sha256
 
         - name: 编译 macOS AMD64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-macos-amd64
+            - VERSION="${CNB_BRANCH#v}"
+            - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=${VERSION}'" -o opencode-dmxapi-${CNB_BRANCH}-macos-amd64
+            - sha256sum opencode-dmxapi-${CNB_BRANCH}-macos-amd64 | awk '{print $1}' > opencode-dmxapi-${CNB_BRANCH}-macos-amd64.sha256
 
         - name: 编译 macOS ARM64
           image: golang:latest
           script:
-            - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o opencode-dmxapi-${CNB_BRANCH}-macos-arm64
+            - VERSION="${CNB_BRANCH#v}"
+            - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=${VERSION}'" -o opencode-dmxapi-${CNB_BRANCH}-macos-arm64
+            - sha256sum opencode-dmxapi-${CNB_BRANCH}-macos-arm64 | awk '{print $1}' > opencode-dmxapi-${CNB_BRANCH}-macos-arm64.sha256
 
         # 5. 先创建 Release（必须在上传附件之前）
         - name: 创建 Release
@@ -204,10 +222,13 @@ $:
               | 平台 | 架构 | 文件 |
               |------|------|------|
               | Windows | x64 | `opencode-dmxapi-${CNB_BRANCH}-windows-amd64.exe` |
+              | Windows | ARM64 | `opencode-dmxapi-${CNB_BRANCH}-windows-arm64.exe` |
               | Linux | x64 | `opencode-dmxapi-${CNB_BRANCH}-linux-amd64` |
               | Linux | ARM64 | `opencode-dmxapi-${CNB_BRANCH}-linux-arm64` |
               | macOS | Intel | `opencode-dmxapi-${CNB_BRANCH}-macos-amd64` |
               | macOS | Apple Silicon | `opencode-dmxapi-${CNB_BRANCH}-macos-arm64` |
+
+              每个二进制均附带同名 `.sha256` 文件用于校验完整性。
 
               ---
 

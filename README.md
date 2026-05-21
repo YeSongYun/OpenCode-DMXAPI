@@ -19,7 +19,7 @@
 
 | 平台 | 要求 |
 |------|------|
-| Windows | Windows 10 x64 及以上 |
+| Windows | Windows 10 及以上，支持 x64 与 ARM64 |
 | macOS | macOS 11 (Big Sur) 及以上，支持 Intel 与 Apple Silicon |
 | Linux | glibc 2.17+，支持 x64 与 ARM64 |
 
@@ -42,7 +42,7 @@ iwr -useb https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.ps1 | i
 ### Windows CMD
 
 ```cmd
-curl -fsSL https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.cmd -o "%TEMP%\install.cmd" && call "%TEMP%\install.cmd"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.ps1 | iex"
 ```
 
 运行后按提示操作：
@@ -154,12 +154,17 @@ curl -fsSL https://cnb.cool/dmxapi/opencode_dmxapi/-/git/raw/main/install.cmd -o
 git clone https://cnb.cool/dmxapi/opencode_dmxapi.git
 cd opencode_dmxapi
 
-# 构建当前平台
+# 构建当前平台（不注入版本号则显示 "dev"）
 go build -o dmxapi-config .
 
+# 指定版本号构建（推荐：与 release 流水线一致）
+go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=2.0.8'" -o dmxapi-config .
+
 # 跨平台构建
-# Windows
-GOOS=windows GOARCH=amd64 go build -o dmxapi-config-windows.exe .
+# Windows x64
+GOOS=windows GOARCH=amd64 go build -o dmxapi-config-windows-amd64.exe .
+# Windows ARM64
+GOOS=windows GOARCH=arm64 go build -o dmxapi-config-windows-arm64.exe .
 
 # macOS Intel
 GOOS=darwin GOARCH=amd64 go build -o dmxapi-config-macos-amd64 .
@@ -167,8 +172,9 @@ GOOS=darwin GOARCH=amd64 go build -o dmxapi-config-macos-amd64 .
 # macOS Apple Silicon
 GOOS=darwin GOARCH=arm64 go build -o dmxapi-config-macos-arm64 .
 
-# Linux
-GOOS=linux GOARCH=amd64 go build -o dmxapi-config-linux .
+# Linux x64 / ARM64
+GOOS=linux GOARCH=amd64 go build -o dmxapi-config-linux-amd64 .
+GOOS=linux GOARCH=arm64 go build -o dmxapi-config-linux-arm64 .
 ```
 
 ## 常见问题

@@ -8,8 +8,9 @@ import (
 	"sync"
 )
 
-// Version 版本号常量，方便后续修改
-const Version = "2.0.5"
+// Version 版本号。默认 "dev" 表示本地开发构建；
+// 发布构建通过 -ldflags "-X 'dmxapi-config/internal/ui.Version=x.y.z'" 注入实际版本号。
+var Version = "dev"
 
 // dmxapiASCIIArt DMXAPI 的 block 字符 ASCII Art（需要 Unicode Box Drawing 字符支持）
 const dmxapiASCIIArt = `

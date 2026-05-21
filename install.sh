@@ -72,6 +72,29 @@ main() {
     exit 1
   fi
 
+  # 可选 SHA256 校验：老 release 可能不带 .sha256 文件，下载失败则跳过
+  local sha_url="${url}.sha256"
+  local sha_path="${bin_path}.sha256"
+  if curl -fsSL -o "$sha_path" "$sha_url" 2>/dev/null; then
+    local expected actual
+    expected="$(awk '{print $1}' "$sha_path")"
+    if command -v sha256sum >/dev/null 2>&1; then
+      actual="$(sha256sum "$bin_path" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+      actual="$(shasum -a 256 "$bin_path" | awk '{print $1}')"
+    else
+      warn "未找到 sha256sum/shasum，跳过校验"
+      actual="$expected"
+    fi
+    if [ "$expected" != "$actual" ]; then
+      err "SHA256 校验失败！期望 $expected，实际 $actual"
+      exit 1
+    fi
+    info "SHA256 校验通过"
+  else
+    warn "未找到 SHA256 校验文件，跳过完整性校验（向后兼容旧 release）"
+  fi
+
   chmod +x "$bin_path"
   if [ "$(uname -s)" = "Darwin" ]; then
     xattr -dr com.apple.quarantine "$bin_path" 2>/dev/null || true
