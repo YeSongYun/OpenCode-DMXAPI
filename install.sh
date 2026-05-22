@@ -8,6 +8,9 @@ REPO="dmxapi/opencode_dmxapi"
 RELEASES_API="https://cnb.cool/${REPO}/-/releases"
 BIN_PREFIX="opencode-dmxapi"
 
+tmp_dir=""
+trap '[ -n "$tmp_dir" ] && rm -rf "$tmp_dir"' EXIT
+
 color() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
 info()  { color "1;36" "==> $*"; }
 warn()  { color "1;33" "!! $*"; }
@@ -50,7 +53,7 @@ main() {
   command -v curl >/dev/null 2>&1 || { err "需要 curl"; exit 1; }
 
   info "检测平台..."
-  local platform tag asset url tmp_dir bin_path
+  local platform tag asset url bin_path
   platform="$(detect_platform)"
   info "平台: $platform"
 
@@ -62,7 +65,6 @@ main() {
   url="https://cnb.cool/${REPO}/-/releases/download/${tag}/${asset}"
 
   tmp_dir="$(mktemp -d -t dmxapi-XXXXXX)"
-  trap 'rm -rf "$tmp_dir"' EXIT
   bin_path="${tmp_dir}/${asset}"
 
   info "下载 $asset ..."
