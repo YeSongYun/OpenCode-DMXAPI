@@ -85,7 +85,7 @@ main() {
   tmp_dir="$(mktemp -d -t dmxapi-XXXXXX)"
   bin_path="${tmp_dir}/${asset}"
 
-  info "临时目录: $tmp_dir（脚本退出时自动删除）"
+  info "临时目录: ${tmp_dir}（脚本退出时自动删除）"
   info "下载 $asset ..."
   if ! curl -fL --progress-bar -o "$bin_path" "$url"; then
     err "下载失败: $url"
@@ -108,7 +108,7 @@ main() {
       actual="$expected"
     fi
     if [ "$expected" != "$actual" ]; then
-      err "SHA256 校验失败！期望 $expected，实际 $actual"
+      err "SHA256 校验失败！期望 ${expected}，实际 ${actual}"
       exit 1
     fi
     info "SHA256 校验通过"
