@@ -175,7 +175,7 @@ cd opencode_dmxapi
 go build -o opencode-dmxapi .
 
 # 注入版本号（与 release 流水线一致）
-go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=2.1.1'" -o opencode-dmxapi .
+go build -ldflags="-s -w -X 'dmxapi-config/internal/ui.Version=2.1.2'" -o opencode-dmxapi .
 
 # 跨平台构建（产物命名与发布资产一致）
 GOOS=windows GOARCH=amd64 go build -o opencode-dmxapi-windows-amd64.exe .
