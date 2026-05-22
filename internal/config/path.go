@@ -10,31 +10,38 @@ import (
 
 // GetConfigPath 返回 opencode.json 配置文件的路径
 //
-// 所有平台均遵循 XDG Base Directory 规范，使用 ~/.config/opencode/opencode.json。
-// 注意：opencode 主程序在 Windows 上同样使用此路径（而非 %APPDATA%），
+// 遵循 XDG Base Directory 规范：优先使用 $XDG_CONFIG_HOME，回退到 ~/.config。
+// 注意：opencode 主程序在 Windows 上同样使用 ~/.config（而非 %APPDATA%），
 // 因此本工具保持一致，无需针对 Windows 做特殊处理。
 // 参考：https://github.com/sst/opencode/issues/6156
 func GetConfigPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
+	base, err := xdgBase("XDG_CONFIG_HOME", ".config")
 	if err != nil {
-		return "", fmt.Errorf("获取用户目录失败: %w", err)
+		return "", err
 	}
-
-	configDir := filepath.Join(homeDir, ".config", "opencode")
-	return filepath.Join(configDir, "opencode.json"), nil
+	return filepath.Join(base, "opencode", "opencode.json"), nil
 }
 
 // GetAuthPath 返回 auth.json 认证文件的路径
-// Windows: C:\Users\<用户>\.local\share\opencode\auth.json
-// macOS/Linux: ~/.local/share/opencode/auth.json
+// 遵循 XDG：优先 $XDG_DATA_HOME，回退 ~/.local/share
 func GetAuthPath() (string, error) {
+	base, err := xdgBase("XDG_DATA_HOME", filepath.Join(".local", "share"))
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(base, "opencode", "auth.json"), nil
+}
+
+// xdgBase 返回 XDG 基目录：若环境变量非空则使用之，否则回退到 ~/<fallback>
+func xdgBase(envVar, fallback string) (string, error) {
+	if v := os.Getenv(envVar); v != "" {
+		return v, nil
+	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("获取用户目录失败: %w", err)
 	}
-
-	authDir := filepath.Join(homeDir, ".local", "share", "opencode")
-	return filepath.Join(authDir, "auth.json"), nil
+	return filepath.Join(homeDir, fallback), nil
 }
 
 // windowsPermWarning 确保 Windows 权限提示只输出一次（问题7修复）

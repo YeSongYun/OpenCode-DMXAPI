@@ -47,19 +47,30 @@ func (r *Reader) ReadExistingConfig() *ExistingConfig {
 		return nil
 	}
 
-	// 查找所有 dmxapi-* provider（兼容新旧格式）
+	// 查找所有 dmxapi-* provider（兼容新旧格式）。
+	// 按 key 字典序遍历，保证 URL/APIKey 取值在多 provider 场景下稳定，
+	// 不受 map 随机迭代顺序影响。
 	var models []string
 	var url, apiKey string
 
-	for key, provider := range config.Provider {
+	keys := make([]string, 0, len(config.Provider))
+	for key := range config.Provider {
 		if key == "dmxapi" || strings.HasPrefix(key, "dmxapi-") {
-			for modelName := range provider.Models {
-				models = append(models, modelName)
-			}
-			if url == "" {
-				url = provider.Options.BaseURL
-				apiKey = provider.Options.APIKey
-			}
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		provider := config.Provider[key]
+		for modelName := range provider.Models {
+			models = append(models, modelName)
+		}
+		if url == "" && provider.Options.BaseURL != "" {
+			url = provider.Options.BaseURL
+		}
+		if apiKey == "" && provider.Options.APIKey != "" {
+			apiKey = provider.Options.APIKey
 		}
 	}
 

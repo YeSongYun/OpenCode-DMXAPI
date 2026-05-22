@@ -59,9 +59,9 @@ func (w *Writer) WriteConfig(config *OpenCodeConfig) (string, error) {
 		return "", fmt.Errorf("序列化配置失败: %w", err)
 	}
 
-	// 写入文件（配置中含 API Key，使用 0600 限制权限）
+	// 原子写入（tmp + rename），避免进程中断留下半截 JSON
 	// 注意：Windows 会忽略 Unix 权限位（0600），Windows 权限警告已在 EnsureDir 中统一输出
-	if err := os.WriteFile(configPath, data, 0600); err != nil {
+	if err := writeFileAtomic(configPath, data, 0600); err != nil {
 		return "", fmt.Errorf("写入配置文件失败: %w", err)
 	}
 
@@ -107,13 +107,27 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 		return "", fmt.Errorf("序列化认证配置失败: %w", err)
 	}
 
-	// 写入文件（使用更严格的权限）
+	// 原子写入（tmp + rename）
 	// 注意：Windows 会忽略 Unix 权限位（0600），Windows 权限警告已在 EnsureDir 中统一输出
-	if err := os.WriteFile(authPath, data, 0600); err != nil {
+	if err := writeFileAtomic(authPath, data, 0600); err != nil {
 		return "", fmt.Errorf("写入认证文件失败: %w", err)
 	}
 
 	return authPath, nil
+}
+
+// writeFileAtomic 先写到同目录下的临时文件再 rename 到目标路径，避免进程中断留下半截文件。
+// 同目录 rename 在主流文件系统上是原子操作。
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, perm); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // backupIfExists 如果文件存在则创建备份
@@ -170,27 +184,89 @@ func (w *Writer) mergeConfigPreservingFields(filePath string, newConfig *OpenCod
 		return nil, fmt.Errorf("反序列化新配置失败: %w", err)
 	}
 
-	// 合并：先清理本工具管理的 dmxapi/dmxapi-* 命名空间，再写入新 provider。
-	// 这样切换模型组合时不会残留上一次写入的过期 provider；其他用户自定义 provider 保留。
+	// 合并：先清理 existing 中已经不在新配置里的本工具管理 provider；
+	// 对新配置中的每个 managed provider 与 existing 同名 provider 做深度合并，
+	// 保留用户在 model 层手动添加的自定义字段（如 reasoning/temperature/tools）。
+	// 其他用户自定义 provider 保留不动。
 	if newProvider, ok := newMap["provider"]; ok {
 		existingProvider, _ := existing["provider"].(map[string]interface{})
 		if existingProvider == nil {
 			existingProvider = make(map[string]interface{})
 		}
+		np, _ := newProvider.(map[string]interface{})
+		if np == nil {
+			np = make(map[string]interface{})
+		}
+		// 清理 existing 中不在新配置里的 managed provider（切换模型组合时旧 provider 不残留）
 		for k := range existingProvider {
 			if isManagedProviderKey(k) {
-				delete(existingProvider, k)
+				if _, keep := np[k]; !keep {
+					delete(existingProvider, k)
+				}
 			}
 		}
-		if np, ok := newProvider.(map[string]interface{}); ok {
-			for k, v := range np {
-				existingProvider[k] = v
+		// 写入或合并新 provider
+		for k, v := range np {
+			if isManagedProviderKey(k) {
+				newP, _ := v.(map[string]interface{})
+				oldP, _ := existingProvider[k].(map[string]interface{})
+				if newP != nil && oldP != nil {
+					existingProvider[k] = mergeManagedProvider(oldP, newP)
+					continue
+				}
 			}
+			existingProvider[k] = v
 		}
 		existing["provider"] = existingProvider
 	}
 
 	return existing, nil
+}
+
+// mergeManagedProvider 将新写入的 managed provider 与已有同名 provider 做深度合并：
+// - npm / name / options 直接以新值覆盖（本工具权威字段）
+// - models：按模型名合并；保留 existing model 内除 name 外的字段（用户自定义如
+//   reasoning/temperature/tools），删除 existing 中不在新模型列表的模型
+// - provider 顶层其他用户字段保留不动
+func mergeManagedProvider(oldP, newP map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(oldP))
+	for k, v := range oldP {
+		out[k] = v
+	}
+	for k, v := range newP {
+		if k == "models" {
+			continue
+		}
+		out[k] = v
+	}
+
+	newModels, _ := newP["models"].(map[string]interface{})
+	oldModels, _ := oldP["models"].(map[string]interface{})
+	if newModels == nil {
+		if oldModels != nil {
+			out["models"] = oldModels
+		}
+		return out
+	}
+	mergedModels := make(map[string]interface{}, len(newModels))
+	for name, nv := range newModels {
+		if oldM, ok := oldModels[name].(map[string]interface{}); ok {
+			merged := make(map[string]interface{}, len(oldM))
+			for k, v := range oldM {
+				merged[k] = v
+			}
+			if nm, ok := nv.(map[string]interface{}); ok {
+				for k, v := range nm {
+					merged[k] = v
+				}
+			}
+			mergedModels[name] = merged
+		} else {
+			mergedModels[name] = nv
+		}
+	}
+	out["models"] = mergedModels
+	return out
 }
 
 // readExistingAuth 读取现有的 auth.json 配置

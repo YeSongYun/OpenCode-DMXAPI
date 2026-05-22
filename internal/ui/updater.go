@@ -61,8 +61,33 @@ func checkUpdate() UpdateResult {
 		return UpdateResult{}
 	}
 
-	latestTag := strings.TrimPrefix(releases[0].TagName, "v")
-	if latestTag == "" || !isNewerVersion(latestTag, Version) {
+	// 从 releases 中过滤掉预发布版本（tag 含 "-"），用 parseSemver 选最大稳定版。
+	// 不依赖 releases[0]，避免 API 返回顺序变化或维护者补发旧版导致误判。
+	var (
+		latestTag string
+		latestVer [3]int
+		found     bool
+	)
+	for _, r := range releases {
+		tag := strings.TrimPrefix(r.TagName, "v")
+		if tag == "" || strings.Contains(tag, "-") {
+			continue
+		}
+		v, ok := parseSemver(tag)
+		if !ok {
+			continue
+		}
+		if !found || compareSemver(v, latestVer) > 0 {
+			latestTag = tag
+			latestVer = v
+			found = true
+		}
+	}
+	if !found {
+		return UpdateResult{}
+	}
+
+	if !isNewerVersion(latestTag, Version) {
 		return UpdateResult{}
 	}
 
@@ -73,10 +98,27 @@ func checkUpdate() UpdateResult {
 	}
 }
 
+// compareSemver 比较两个 [3]int 版本号，a > b 返回 1，a < b 返回 -1，相等返回 0
+func compareSemver(a, b [3]int) int {
+	for i := 0; i < 3; i++ {
+		if a[i] != b[i] {
+			if a[i] > b[i] {
+				return 1
+			}
+			return -1
+		}
+	}
+	return 0
+}
+
 // isNewerVersion 判断 latest 是否比 current 更新。
-// 解析失败时回退到字符串不等比较；current == "dev" 时永不提示（避免本地开发构建噪音）。
+// 解析失败时回退到字符串不等比较；current == "dev" 时永不提示（避免本地开发构建噪音）；
+// latest 含 "-"（预发布）时永不提示稳定用户。
 func isNewerVersion(latest, current string) bool {
 	if current == "dev" {
+		return false
+	}
+	if strings.Contains(latest, "-") {
 		return false
 	}
 	lp, lok := parseSemver(latest)
@@ -84,12 +126,7 @@ func isNewerVersion(latest, current string) bool {
 	if !lok || !cok {
 		return latest != current
 	}
-	for i := 0; i < 3; i++ {
-		if lp[i] != cp[i] {
-			return lp[i] > cp[i]
-		}
-	}
-	return false
+	return compareSemver(lp, cp) > 0
 }
 
 // parseSemver 将 "x.y.z" 解析为 [3]int。

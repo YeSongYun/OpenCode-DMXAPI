@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -57,7 +58,9 @@ func fallbackInput(prompt, defaultVal string) (string, error) {
 	}
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
-	if err != nil {
+	// 容忍 "EOF + 非空行" 的情况：heredoc / `echo -n` 等不带尾换行的输入
+	// 也能正确读到内容，而不是被当作读取失败
+	if err != nil && (!errors.Is(err, io.EOF) || line == "") {
 		return "", fmt.Errorf("读取输入失败: %w", err)
 	}
 	line = strings.TrimSpace(line)
@@ -76,7 +79,7 @@ func fallbackSelect(prompt string, options []string) (int, error) {
 	fmt.Print("  请输入选项编号: ")
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
-	if err != nil {
+	if err != nil && (!errors.Is(err, io.EOF) || line == "") {
 		return 0, fmt.Errorf("读取输入失败: %w", err)
 	}
 	line = strings.TrimSpace(line)
