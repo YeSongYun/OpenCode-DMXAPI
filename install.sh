@@ -52,7 +52,7 @@ fetch_latest_tag() {
     err "无法访问 $RELEASES_API"
     exit 1
   fi
-  tags="$(printf '%s' "$json" | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/')"
+  tags="$(printf '%s' "$json" | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/' || true)"
   if [ -z "$tags" ]; then
     err "无法解析最新版本号"
     exit 1
@@ -61,7 +61,7 @@ fetch_latest_tag() {
   if [ -n "$stable" ]; then
     tag="$(printf '%s\n' "$stable" | sort -V | tail -1)"
   else
-    tag="$(printf '%s\n' "$tags" | head -1)"
+    tag="$(printf '%s\n' "$tags" | sort -V | tail -1)"
     warn "未找到稳定版本，使用最新预发布版本: $tag"
   fi
   echo "$tag"

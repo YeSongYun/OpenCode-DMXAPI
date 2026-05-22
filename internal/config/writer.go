@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -118,13 +119,32 @@ func (w *Writer) WriteAuth(authConfig AuthConfig) (string, error) {
 
 // writeFileAtomic 先写到同目录下的临时文件再 rename 到目标路径，避免进程中断留下半截文件。
 // 同目录 rename 在主流文件系统上是原子操作。
+// 使用 os.CreateTemp 生成唯一后缀，避免并发或上次崩溃残留的 ".tmp" 冲突。
 func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, perm); err != nil {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	f, err := os.CreateTemp(dir, base+".tmp.*")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	cleanup := func() { _ = os.Remove(tmp) }
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		cleanup()
+		return err
+	}
+	if err := f.Chmod(perm); err != nil && runtime.GOOS != "windows" {
+		_ = f.Close()
+		cleanup()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		cleanup()
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
+		cleanup()
 		return err
 	}
 	return nil
@@ -286,9 +306,27 @@ func (w *Writer) readExistingAuth(filePath string) AuthConfig {
 
 // pruneOldBackups 仅保留 filePath 对应的最近 maxBackupsPerFile 份 .backup.* 文件，
 // 删除更早的备份，避免长期使用堆积无数备份占用磁盘。失败时仅输出警告。
+// 使用 os.ReadDir + 前缀匹配（而非 filepath.Glob），避免 XDG_*_HOME 路径中包含
+// "[" / "?" 等 glob 元字符时被错误解释。
 func (w *Writer) pruneOldBackups(filePath string) {
-	matches, err := filepath.Glob(filePath + ".backup.*")
-	if err != nil || len(matches) <= maxBackupsPerFile {
+	dir := filepath.Dir(filePath)
+	base := filepath.Base(filePath)
+	prefix := base + ".backup."
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	var matches []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasPrefix(name, prefix) {
+			matches = append(matches, filepath.Join(dir, name))
+		}
+	}
+	if len(matches) <= maxBackupsPerFile {
 		return
 	}
 	// 时间戳格式 20060102_150405 字典序即时间序，升序排序后删除最旧的若干份

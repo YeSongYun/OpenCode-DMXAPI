@@ -31,8 +31,9 @@ $:
         - name: sync tag to github
           image: alpine/git
           script:
-            - git remote add github https://${GIT_USERNAME}:${GIT_ACCESS_TOKEN}@github.com/YeSongYun/OpenCode-DMXAPI.git || true
-            - git push github ${CNB_BRANCH} --force
+            # 改用 http.extraHeader 注入 Basic 凭证，避免 token 写入 .git/config 后被调试日志泄露
+            - TOKEN_B64=$(printf '%s:%s' "${GIT_USERNAME}" "${GIT_ACCESS_TOKEN}" | base64 | tr -d '\n')
+            - git -c http.extraHeader="Authorization: Basic ${TOKEN_B64}" push https://github.com/YeSongYun/OpenCode-DMXAPI.git ${CNB_BRANCH} --force
 
         # 1. 生成更新日志（使用 git-cliff 支持 commit 自动分类）
         - name: 生成更新日志
@@ -100,7 +101,7 @@ $:
               if [ "$HTTP_CODE" = "200" ]; then
                 AI_TEXT=$(echo "$BODY" | jq -r '.content[0].text // empty')
                 AI_LEN=${#AI_TEXT}
-                if echo "$AI_TEXT" | head -1 | grep -qE '^## v[0-9]+\.[0-9]+\.[0-9]+ \([0-9]{4}-[0-9]{2}-[0-9]{2}\)' && [ "$AI_LEN" -le 10000 ]; then
+                if echo "$AI_TEXT" | head -1 | grep -qE '^## v[0-9]+\.[0-9]+\.[0-9]+ \([0-9]{4}-[0-9]{2}-[0-9]{2}\)' && [ "$AI_LEN" -ge 30 ] && [ "$AI_LEN" -le 10000 ]; then
                   echo "$AI_TEXT"
                   exit 0
                 fi
@@ -149,6 +150,10 @@ $:
               fi
 
               git add CHANGELOG.md
+              if git diff --cached --quiet; then
+                echo "CHANGELOG.md 无变化，跳过提交与推送" >&2
+                exit 0
+              fi
               git commit -m "docs: update CHANGELOG.md for ${CNB_BRANCH}"
               # 使用 CNB_TOKEN 推回 cnb.cool。改用 http.extraHeader 注入 Basic 凭证，
               # 避免 sed 替换 URL 时被 token 内特殊字符（| & \ 等）破坏

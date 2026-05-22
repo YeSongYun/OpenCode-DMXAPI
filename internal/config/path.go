@@ -32,9 +32,10 @@ func GetAuthPath() (string, error) {
 	return filepath.Join(base, "opencode", "auth.json"), nil
 }
 
-// xdgBase 返回 XDG 基目录：若环境变量非空则使用之，否则回退到 ~/<fallback>
+// xdgBase 返回 XDG 基目录：若环境变量为非空且为绝对路径则使用之，否则回退到 ~/<fallback>
+// XDG 规范要求环境变量必须为绝对路径，否则应被忽略。
 func xdgBase(envVar, fallback string) (string, error) {
-	if v := os.Getenv(envVar); v != "" {
+	if v := os.Getenv(envVar); v != "" && filepath.IsAbs(v) {
 		return v, nil
 	}
 	homeDir, err := os.UserHomeDir()

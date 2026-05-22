@@ -11,6 +11,8 @@ import (
 	"dmxapi-config/internal/config"
 	"dmxapi-config/internal/input"
 	"dmxapi-config/internal/ui"
+
+	"github.com/mattn/go-isatty"
 )
 
 func init() {
@@ -24,11 +26,14 @@ func init() {
 	}
 }
 
-// waitForExit 等待用户按任意键退出
+// waitForExit 等待用户按 Enter 退出；非 TTY（如管道）下跳过，避免空打提示。
 func waitForExit() {
+	if !isatty.IsTerminal(os.Stdin.Fd()) && !isatty.IsCygwinTerminal(os.Stdin.Fd()) {
+		return
+	}
 	fmt.Println()
 	fmt.Print("按 Enter 键退出...")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
 func main() {
@@ -131,6 +136,11 @@ func runFullConfiguration(collector *input.Collector) {
 	// [4/6] 测试API连接
 	ui.PrintStep(4, 6, "测试 API 连接")
 	ui.PrintInfo("正在测试连接...")
+	if len(models) == 0 {
+		ui.PrintError("模型列表为空，无法测试连接")
+		waitForExit()
+		os.Exit(1)
+	}
 	tester := api.NewTester(url, apiKey)
 	if err := tester.TestConnection(models[0]); err != nil {
 		ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", err))

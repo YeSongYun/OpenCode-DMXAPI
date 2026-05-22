@@ -59,8 +59,21 @@ function Get-LatestTag {
         }
         return ($stable | Sort-Object -Descending)[0]
     }
-    Write-Warn "未找到稳定版本，使用最新预发布版本: $($tags[0])"
-    return $tags[0]
+    Write-Warn "未找到稳定版本，使用最新预发布版本"
+    $parsedPre = @()
+    foreach ($t in $tags) {
+        $vstr = $t.TrimStart('v')
+        # 去掉 "-beta.1" / "+sha" 等后缀，只保留前导数字段
+        $vstr = ($vstr -split '[-+]')[0]
+        $v = $null
+        if ([Version]::TryParse($vstr, [ref]$v)) {
+            $parsedPre += [PSCustomObject]@{ Tag = $t; Version = $v }
+        }
+    }
+    if ($parsedPre.Count -gt 0) {
+        return ($parsedPre | Sort-Object Version -Descending | Select-Object -First 1).Tag
+    }
+    return ($tags | Sort-Object -Descending)[0]
 }
 
 Write-Info '检测平台...'

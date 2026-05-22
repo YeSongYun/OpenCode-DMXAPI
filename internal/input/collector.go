@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/x/term"
 	"github.com/mattn/go-isatty"
 )
 
@@ -200,6 +201,20 @@ func (c *Collector) CollectAPIKey() (string, error) {
 }
 
 func (c *Collector) collectAPIKeyFallback() (string, error) {
+	// 优先尝试无回显读取（Unix/Windows 真终端均支持）；失败再降级到明文输入。
+	if isTerminal() {
+		fmt.Print("  请输入 API Key（输入不回显）: ")
+		pw, err := term.ReadPassword(os.Stdin.Fd())
+		fmt.Println()
+		if err == nil {
+			apiKey := strings.TrimSpace(string(pw))
+			if err := ValidateAPIKey(apiKey); err != nil {
+				return "", err
+			}
+			return apiKey, nil
+		}
+		// 读取失败（如 Windows 旧版控制台），降级
+	}
 	fmt.Println("  注意: 非交互模式，API Key 将以明文显示")
 	apiKey, err := fallbackInput("请输入 API Key", "")
 	if err != nil {

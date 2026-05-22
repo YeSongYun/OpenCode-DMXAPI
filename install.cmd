@@ -13,7 +13,7 @@ if errorlevel 1 (
 )
 
 echo ==^> 正在通过 PowerShell 执行一键安装...
-set "PS1_TMP=%TEMP%\dmxapi_install_%RANDOM%.ps1"
+set "PS1_TMP=%TEMP%\dmxapi_install_%RANDOM%_%RANDOM%.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -UseBasicParsing -Uri '%PS1_URL%' -OutFile '%PS1_TMP%'"
 if errorlevel 1 (
     echo X 下载 install.ps1 失败
