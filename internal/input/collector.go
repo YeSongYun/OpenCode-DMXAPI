@@ -21,6 +21,15 @@ const (
 	ConfigModeModelOnly ConfigMode = 2 // 仅配置模型
 )
 
+// TestFailedAction 表示 API 测试失败后用户选择的下一步动作
+type TestFailedAction int
+
+const (
+	TestFailedActionRetry TestFailedAction = iota + 1 // 重新输入 URL/API Key/模型
+	TestFailedActionForce                              // 强制写入（跳过连接测试）
+	TestFailedActionAbort                              // 退出
+)
+
 // Collector 用户输入收集器
 type Collector struct{}
 
@@ -128,6 +137,47 @@ func (c *Collector) collectConfigModeFallback() (ConfigMode, error) {
 		return 0, err
 	}
 	return ConfigMode(idx + 1), nil
+}
+
+// CollectTestFailedAction 在 API 连接测试失败后询问用户下一步动作。
+// 返回 Retry / Force / Abort 三种选项之一；用户按 Ctrl+C 视为 Abort。
+func (c *Collector) CollectTestFailedAction() (TestFailedAction, error) {
+	options := []string{
+		"重新配置 - 重新输入 URL/API Key/模型",
+		"强制写入 - 跳过测试，按当前输入继续",
+		"退出",
+	}
+	if !isTerminal() {
+		idx, err := fallbackSelect("API 测试失败，请选择下一步", options)
+		if err != nil {
+			return 0, err
+		}
+		return TestFailedAction(idx + 1), nil
+	}
+	var act TestFailedAction
+	err := huh.NewSelect[TestFailedAction]().
+		Title("API 测试失败，请选择下一步").
+		Options(
+			huh.NewOption(options[0], TestFailedActionRetry),
+			huh.NewOption(options[1], TestFailedActionForce),
+			huh.NewOption(options[2], TestFailedActionAbort),
+		).
+		Value(&act).
+		Run()
+	if err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			return TestFailedActionAbort, nil
+		}
+		if isTTYError(err) {
+			idx, ferr := fallbackSelect("API 测试失败，请选择下一步", options)
+			if ferr != nil {
+				return 0, ferr
+			}
+			return TestFailedAction(idx + 1), nil
+		}
+		return 0, err
+	}
+	return act, nil
 }
 
 // CollectURL 收集URL输入

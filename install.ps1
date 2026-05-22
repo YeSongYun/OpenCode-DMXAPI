@@ -93,6 +93,7 @@ New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
 $binPath = Join-Path $tmpDir $asset
 
 try {
+    Write-Info "临时目录: $tmpDir（脚本退出时自动删除）"
     Write-Info "下载 $asset ..."
     try {
         Invoke-WebRequest -Uri $url -OutFile $binPath -UseBasicParsing

@@ -100,55 +100,81 @@ func main() {
 
 // runFullConfiguration 运行完整配置流程（6步）
 func runFullConfiguration(collector *input.Collector) {
-	// [1/6] 配置URL
-	ui.PrintStep(1, 6, "配置 DMXAPI URL")
-	url, err := collector.CollectURL()
-	if err != nil {
-		ui.PrintError(fmt.Sprintf("读取URL失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	ui.PrintSuccess(fmt.Sprintf("URL 已设置: %s", url))
-	fmt.Println()
+	var (
+		url     string
+		apiKey  string
+		models  []string
+	)
 
-	// [2/6] 配置API Key
-	ui.PrintStep(2, 6, "配置 API Key")
-	apiKey, err := collector.CollectAPIKey()
-	if err != nil {
-		ui.PrintError(fmt.Sprintf("读取API Key失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	ui.PrintSuccess("API Key 已设置")
-	fmt.Println()
+	for {
+		// [1/6] 配置URL
+		ui.PrintStep(1, 6, "配置 DMXAPI URL")
+		var err error
+		url, err = collector.CollectURL()
+		if err != nil {
+			ui.PrintError(fmt.Sprintf("读取URL失败: %v", err))
+			waitForExit()
+			os.Exit(1)
+		}
+		ui.PrintSuccess(fmt.Sprintf("URL 已设置: %s", url))
+		fmt.Println()
 
-	// [3/6] 配置模型
-	ui.PrintStep(3, 6, "配置模型")
-	models, err := collector.CollectModels()
-	if err != nil {
-		ui.PrintError(fmt.Sprintf("读取模型失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	ui.PrintSuccess(fmt.Sprintf("已添加 %d 个模型", len(models)))
-	fmt.Println()
+		// [2/6] 配置API Key
+		ui.PrintStep(2, 6, "配置 API Key")
+		apiKey, err = collector.CollectAPIKey()
+		if err != nil {
+			ui.PrintError(fmt.Sprintf("读取API Key失败: %v", err))
+			waitForExit()
+			os.Exit(1)
+		}
+		ui.PrintSuccess("API Key 已设置")
+		fmt.Println()
 
-	// [4/6] 测试API连接
-	ui.PrintStep(4, 6, "测试 API 连接")
-	ui.PrintInfo("正在测试连接...")
-	if len(models) == 0 {
-		ui.PrintError("模型列表为空，无法测试连接")
-		waitForExit()
-		os.Exit(1)
+		// [3/6] 配置模型
+		ui.PrintStep(3, 6, "配置模型")
+		models, err = collector.CollectModels()
+		if err != nil {
+			ui.PrintError(fmt.Sprintf("读取模型失败: %v", err))
+			waitForExit()
+			os.Exit(1)
+		}
+		ui.PrintSuccess(fmt.Sprintf("已添加 %d 个模型", len(models)))
+		fmt.Println()
+
+		// [4/6] 测试API连接
+		ui.PrintStep(4, 6, "测试 API 连接")
+		ui.PrintInfo("正在测试连接...")
+		if len(models) == 0 {
+			ui.PrintError("模型列表为空，无法测试连接")
+			waitForExit()
+			os.Exit(1)
+		}
+		tester := api.NewTester(url, apiKey)
+		if testErr := tester.TestConnection(models[0]); testErr != nil {
+			ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", testErr))
+			action, aerr := collector.CollectTestFailedAction()
+			if aerr != nil {
+				ui.PrintError(fmt.Sprintf("读取选择失败: %v", aerr))
+				waitForExit()
+				os.Exit(1)
+			}
+			switch action {
+			case input.TestFailedActionRetry:
+				ui.PrintDivider()
+				continue
+			case input.TestFailedActionForce:
+				ui.PrintWarning("已选择强制写入，跳过连接测试")
+				fmt.Println()
+			case input.TestFailedActionAbort:
+				waitForExit()
+				os.Exit(1)
+			}
+		} else {
+			ui.PrintSuccess("API 连接测试成功！")
+			fmt.Println()
+		}
+		break
 	}
-	tester := api.NewTester(url, apiKey)
-	if err := tester.TestConnection(models[0]); err != nil {
-		ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", err))
-		waitForExit()
-		os.Exit(1)
-	}
-	ui.PrintSuccess("API 连接测试成功！")
-	fmt.Println()
 
 	ui.PrintDivider()
 	ui.PrintInfo("正在写入配置文件...")
