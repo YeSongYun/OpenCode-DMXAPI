@@ -11,7 +11,18 @@ BIN_PREFIX="opencode-dmxapi"
 tmp_dir=""
 trap '[ -n "$tmp_dir" ] && rm -rf "$tmp_dir"' EXIT
 
-color() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
+USE_COLOR=1
+if [ -n "${NO_COLOR-}" ] || [ "${TERM-}" = "dumb" ] || [ ! -t 1 ]; then
+  USE_COLOR=0
+fi
+
+color() {
+  if [ "$USE_COLOR" = "1" ]; then
+    printf '\033[%sm%s\033[0m\n' "$1" "$2"
+  else
+    printf '%s\n' "$2"
+  fi
+}
 info()  { color "1;36" "==> $*"; }
 warn()  { color "1;33" "!! $*"; }
 err()   { color "1;31" "✖ $*" >&2; }
@@ -34,17 +45,24 @@ detect_platform() {
   echo "${os}-${arch}"
 }
 
-# --- 获取最新 tag ---
+# --- 获取最新 tag（过滤 prerelease，按 semver 取最大） ---
 fetch_latest_tag() {
-  local json tag
+  local json tags stable tag
   if ! json="$(curl -fsSL -H 'Accept: application/json' "$RELEASES_API")"; then
     err "无法访问 $RELEASES_API"
     exit 1
   fi
-  tag="$(printf '%s' "$json" | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/')"
-  if [ -z "$tag" ]; then
+  tags="$(printf '%s' "$json" | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/')"
+  if [ -z "$tags" ]; then
     err "无法解析最新版本号"
     exit 1
+  fi
+  stable="$(printf '%s\n' "$tags" | grep -v -- '-' || true)"
+  if [ -n "$stable" ]; then
+    tag="$(printf '%s\n' "$stable" | sort -V | tail -1)"
+  else
+    tag="$(printf '%s\n' "$tags" | head -1)"
+    warn "未找到稳定版本，使用最新预发布版本: $tag"
   fi
   echo "$tag"
 }

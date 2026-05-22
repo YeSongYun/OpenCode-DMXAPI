@@ -42,7 +42,25 @@ function Get-LatestTag {
         Write-Err '未找到任何 release'
         exit 1
     }
-    return $releases[0].tag_name
+
+    $tags = @($releases | ForEach-Object { $_.tag_name } | Where-Object { $_ })
+    $stable = @($tags | Where-Object { $_ -notmatch '-' })
+    if ($stable.Count -gt 0) {
+        $parsed = @()
+        foreach ($t in $stable) {
+            $vstr = $t.TrimStart('v')
+            $v = $null
+            if ([Version]::TryParse($vstr, [ref]$v)) {
+                $parsed += [PSCustomObject]@{ Tag = $t; Version = $v }
+            }
+        }
+        if ($parsed.Count -gt 0) {
+            return ($parsed | Sort-Object Version -Descending | Select-Object -First 1).Tag
+        }
+        return ($stable | Sort-Object -Descending)[0]
+    }
+    Write-Warn "未找到稳定版本，使用最新预发布版本: $($tags[0])"
+    return $tags[0]
 }
 
 Write-Info '检测平台...'
@@ -93,7 +111,12 @@ try {
 
     Write-Info '启动配置...'
     Write-Host ''
-    & $binPath
+    # 使用 Start-Process -NoNewWindow 让子进程接管当前控制台 stdin/stdout，
+    # 避免 iex pipeline 占用 stdin 导致 huh 交互输入立刻 EOF
+    $proc = Start-Process -FilePath $binPath -NoNewWindow -Wait -PassThru
+    if ($proc.ExitCode -ne 0) {
+        exit $proc.ExitCode
+    }
 } finally {
     Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
 }

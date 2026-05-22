@@ -150,11 +150,10 @@ $:
 
               git add CHANGELOG.md
               git commit -m "docs: update CHANGELOG.md for ${CNB_BRANCH}"
-              # 使用 CNB_TOKEN 推回 cnb.cool（tag_push 事件下具备代码读写权限）
-              ORIGIN_URL=$(git remote get-url origin)
-              ORIGIN_WITH_CREDS=$(echo "$ORIGIN_URL" | sed "s|https://[^@]*@|https://|; s|https://|https://cnb:${CNB_TOKEN}@|")
-              git remote set-url origin "$ORIGIN_WITH_CREDS"
-              if ! git push origin temp-changelog:main; then
+              # 使用 CNB_TOKEN 推回 cnb.cool。改用 http.extraHeader 注入 Basic 凭证，
+              # 避免 sed 替换 URL 时被 token 内特殊字符（| & \ 等）破坏
+              TOKEN_B64=$(printf 'cnb:%s' "${CNB_TOKEN}" | base64 | tr -d '\n')
+              if ! git -c http.extraHeader="Authorization: Basic ${TOKEN_B64}" push origin temp-changelog:main; then
                 echo "推送 CHANGELOG.md 到 main 失败（可能存在并发冲突），跳过本次更新" >&2
                 exit 0
               fi
