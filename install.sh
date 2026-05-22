@@ -104,14 +104,16 @@ main() {
     elif command -v shasum >/dev/null 2>&1; then
       actual="$(shasum -a 256 "$bin_path" | awk '{print $1}')"
     else
-      warn "未找到 sha256sum/shasum，跳过校验"
-      actual="$expected"
+      actual=""
     fi
-    if [ "$expected" != "$actual" ]; then
+    if [ -z "$actual" ]; then
+      warn "未找到 sha256sum/shasum，跳过完整性校验（无法验证二进制是否被篡改）"
+    elif [ "$expected" != "$actual" ]; then
       err "SHA256 校验失败！期望 ${expected}，实际 ${actual}"
       exit 1
+    else
+      info "SHA256 校验通过"
     fi
-    info "SHA256 校验通过"
   else
     warn "未找到 SHA256 校验文件，跳过完整性校验（向后兼容旧 release）"
   fi

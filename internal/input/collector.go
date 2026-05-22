@@ -26,8 +26,8 @@ type TestFailedAction int
 
 const (
 	TestFailedActionRetry TestFailedAction = iota + 1 // 重新输入 URL/API Key/模型
-	TestFailedActionForce                              // 强制写入（跳过连接测试）
-	TestFailedActionAbort                              // 退出
+	TestFailedActionForce                             // 强制写入（跳过连接测试）
+	TestFailedActionAbort                             // 退出
 )
 
 // Collector 用户输入收集器
@@ -324,4 +324,3 @@ func parseModels(s string) []string {
 	}
 	return models
 }
-

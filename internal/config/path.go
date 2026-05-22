@@ -62,4 +62,3 @@ func EnsureDir(filePath string) error {
 	}
 	return nil
 }
-

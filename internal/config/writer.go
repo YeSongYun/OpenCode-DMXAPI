@@ -244,10 +244,10 @@ func (w *Writer) mergeConfigPreservingFields(filePath string, newConfig *OpenCod
 }
 
 // mergeManagedProvider 将新写入的 managed provider 与已有同名 provider 做深度合并：
-// - npm / name / options 直接以新值覆盖（本工具权威字段）
-// - models：按模型名合并；保留 existing model 内除 name 外的字段（用户自定义如
-//   reasoning/temperature/tools），删除 existing 中不在新模型列表的模型
-// - provider 顶层其他用户字段保留不动
+//   - npm / name / options 直接以新值覆盖（本工具权威字段）
+//   - models：按模型名合并；保留 existing model 内除 name 外的字段（用户自定义如
+//     reasoning/temperature/tools），删除 existing 中不在新模型列表的模型
+//   - provider 顶层其他用户字段保留不动
 func mergeManagedProvider(oldP, newP map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(oldP))
 	for k, v := range oldP {

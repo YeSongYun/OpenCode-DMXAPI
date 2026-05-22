@@ -61,4 +61,3 @@ func ValidateModels(models []string) error {
 
 	return nil
 }
-

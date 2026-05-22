@@ -101,9 +101,9 @@ func main() {
 // runFullConfiguration 运行完整配置流程（6步）
 func runFullConfiguration(collector *input.Collector) {
 	var (
-		url     string
-		apiKey  string
-		models  []string
+		url    string
+		apiKey string
+		models []string
 	)
 
 	for {
