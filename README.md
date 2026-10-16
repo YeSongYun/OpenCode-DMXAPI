@@ -8,9 +8,10 @@
 
 ## 功能特点
 
-- **智能模型路由** — 根据模型名称自动归类到 Anthropic / Google / OpenAI Responses / OpenAI 兼容 SDK
+- **多 API 格式与智能模型路由** — 支持 Anthropic Messages、OpenAI Chat Completions、OpenAI Responses 与 Google Generative AI，输入模型名称后自动选择协议和 provider
+- **模型自动匹配** — 按显式 provider/model 命名空间、精确别名与规则、大小写不敏感的前缀/正则依次匹配，未知模型回退到 OpenAI Chat Completions
 - **双模式配置** — 完整配置（URL + API Key + 模型）或仅模型配置（保留 URL/Key，仅更换模型）
-- **URL 规范化** — 自动去除用户输入末尾的 `/v1` / `/v1beta` 等版本后缀，按 provider 类型重新拼接
+- **URL 规范化** — 接受根地址、版本路径或完整 endpoint，按目标协议去除重复段并重新组合请求 URL
 - **API 连接验证** — 写入配置前自动测试 API Key 与连通性
 - **自动备份** — 写入前备份既有 `opencode.json` 和 `auth.json`
 - **配置合并** — 保留 `opencode.json` 中已有的自定义字段
@@ -49,10 +50,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://cnb.co
 运行后按提示操作：
 
 1. 选择配置模式（如检测到现有配置）
-2. 输入 **DMXAPI URL**（默认 `https://www.dmxapi.cn`，可省略 `/v1` 后缀）
+2. 输入 **DMXAPI URL**（默认 `https://www.dmxapi.cn`，可填写 `/v1`、`/v1beta` 或完整 endpoint）
 3. 输入 **API Key**（在 https://www.dmxapi.cn/token 获取）
-4. 输入 **模型名称**（多个以英文逗号分隔）
-5. 工具自动测试连接、生成并写入配置文件
+4. 输入 **模型名称**（多个以英文逗号分隔；可带 `anthropic/`、`openai/` 等 provider 前缀）
+5. 工具按模型自动匹配协议，测试连接并生成配置文件
 6. 完成后运行 `opencode` 即可使用 DMXAPI 服务
 
 > 安装脚本会下载与当前平台匹配的发布资产（`opencode-dmxapi-<tag>-<platform>`）到临时目录并直接运行，不会驻留二进制文件。
@@ -66,18 +67,40 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://cnb.co
 | **完整配置** | 重新配置 URL、API Key 和模型 | 首次配置或更换账号 |
 | **仅模型配置** | 保留现有 URL 与 API Key，只更新模型列表 | 快速切换或追加模型 |
 
-## 智能模型路由
+## 智能模型路由与 API 格式
 
-工具根据模型名称自动归类到对应 SDK（见 `internal/config/config.go` 中的 `ClassifyModel`）：
+工具将输入模型按协议分组，并为每组生成独立 provider。ZCode 官方配置定义了 `anthropic-messages`、`openai-chat-completions`、`openai-responses` 三类 API；本工具在此基础上保留 Google Generative AI 扩展，参考 [ZCode 官方仓库](https://github.com/zai-org/ZCode) 的 API 配置方式。
 
-| 匹配规则 | Provider ID | NPM 包 | 示例 |
-|----------|-------------|--------|------|
-| 以 `claude` 开头，或以 `-cc` 结尾 | `dmxapi-anthropic` | `@ai-sdk/anthropic` | `claude-opus-4-5-20251101`、`claude-sonnet-4-20250514`、`my-model-cc` |
-| 以 `gemini` 开头 | `dmxapi-google` | `@ai-sdk/google` | `gemini-2.5-pro`、`gemini-2.5-flash` |
-| 以 `gpt-5` 开头，或 `o1` / `o3` / `o4` 系列 | `dmxapi-openai-responses` | `@ai-sdk/openai` | `gpt-5`、`gpt-5-mini`、`o1-preview`、`o3-mini`、`o4-mini` |
-| 其他 | `dmxapi-openai` | `@ai-sdk/openai-compatible` | `gpt-4o`、`DeepSeek-V3`、`qwen-max` |
+| API 格式 | Provider ID | NPM 包 | 常见匹配示例 |
+|----------|-------------|--------|--------------|
+| `anthropic-messages` | `dmxapi-anthropic` | `@ai-sdk/anthropic` | `claude-opus-4-5-20251101`、`claude-sonnet-4-20250514`、`my-model-cc` |
+| `google-generative-ai`（扩展） | `dmxapi-google` | `@ai-sdk/google` | `gemini-2.5-pro`、`gemini-2.5-flash`、`gemma-3-27b` |
+| `openai-responses` | `dmxapi-openai-responses` | `@ai-sdk/openai` | `gpt-5`、`gpt-5-mini`、`o1-preview`、`o3-mini`、`o4-mini` |
+| `openai-chat-completions` | `dmxapi-openai` | `@ai-sdk/openai-compatible` | `gpt-4o`、`DeepSeek-V3`、`qwen-max`、未知模型 |
 
-**示例：** 配置 `claude-opus-4-5-20251101,gemini-2.5-pro,gpt-5-mini,DeepSeek-V3` 会同时生成 4 个 provider，并自动为 Google provider 使用 `/v1beta` 路径、为其他 provider 使用 `/v1` 路径。
+模型匹配优先级如下：
+
+1. **显式 provider/model 命名空间**：例如 `anthropic/claude-...`、`openai/gpt-...`，命名空间只作为协议匹配提示。
+2. **精确别名与协议规则**：覆盖 Claude/Anthropic、Gemini/Gemma、GPT-5/4.1/4o、o1-o4 等已知系列。
+3. **大小写归一后的前缀与正则规则**：覆盖 DeepSeek、Qwen、GLM、Kimi、MiniMax、Mistral、Grok 等常见模型家族。
+4. **OpenAI Chat Completions 兜底**：无法识别的模型仍按 OpenAI 兼容格式配置。
+
+模型 ID 默认原样写入 `opencode.json` 和连接测试请求体；provider 前缀不会被自动剥离，便于网关使用包含斜杠的模型 ID。
+
+**示例：** 配置 `claude-opus-4-5-20251101,gemini-2.5-pro,gpt-5-mini,DeepSeek-V3` 会同时生成 Anthropic、Google、OpenAI Responses 和 OpenAI Chat 四个 provider，并按各自协议使用对应 endpoint。
+
+### URL 输入与 endpoint 组合
+
+URL 可以填写服务根地址、版本根路径或完整接口路径，例如：
+
+- `https://www.dmxapi.cn`
+- `https://www.dmxapi.cn/v1`、`https://www.dmxapi.cn/v1beta`
+- `https://www.dmxapi.cn/v1/chat/completions`、`/v1/messages`、`/v1/responses`
+- Google Generative AI 的 `...:generateContent` 地址
+
+工具会按目标协议去除已存在的同类 endpoint 段，再拼接 SDK 所需路径，避免重复出现 `/v1/v1`、`/v1beta/v1beta`；自定义 base path、查询参数和尾部斜杠会被保留。生成配置时 Anthropic、OpenAI Chat、OpenAI Responses 默认使用 `/v1`，Google 使用 `/v1beta`。
+
+完整配置会按协议分组，每组只使用该组的第一个模型测试一次连接；混合模型不会因为只测试 `models[0]` 而漏掉其他协议。选择“仅模型配置”时不发起网络测试，只更新模型列表并保留已有 URL 和 API Key。
 
 ## 配置文件
 
@@ -226,4 +249,5 @@ xattr -dr com.apple.quarantine /path/to/下载的可执行文件
 | 获取 API Key | https://www.dmxapi.cn/token |
 | 可用模型列表 | https://www.dmxapi.cn/rmb |
 | OpenCode 文档 | https://opencode.ai |
+| ZCode 官方配置参考 | https://github.com/zai-org/ZCode |
 | 项目仓库 | https://cnb.cool/dmxapi/opencode_dmxapi |
