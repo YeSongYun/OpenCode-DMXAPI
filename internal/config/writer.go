@@ -12,10 +12,15 @@ import (
 	"time"
 )
 
-// isManagedProviderKey 判断 key 是否属于本工具管理的 dmxapi 命名空间。
-// 仅这些 key 在写入新配置时会被清理；用户手动添加的其他 provider 不受影响。
+// isManagedProviderKey 判断 key 是否属于本工具明确管理的 provider。
+// 不再按 dmxapi- 前缀全部清理，避免误删用户自定义的同前缀 provider。
 func isManagedProviderKey(key string) bool {
-	return key == "dmxapi" || strings.HasPrefix(key, "dmxapi-")
+	switch key {
+	case "dmxapi", "dmxapi-anthropic", "dmxapi-google", "dmxapi-openai", "dmxapi-openai-responses":
+		return true
+	default:
+		return false
+	}
 }
 
 // maxBackupsPerFile 限制单个目标文件保留的备份份数，避免长期使用堆积无数 .backup.*

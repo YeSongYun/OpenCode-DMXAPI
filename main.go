@@ -150,8 +150,19 @@ func runFullConfiguration(collector *input.Collector) {
 			os.Exit(1)
 		}
 		tester := api.NewTester(url, apiKey)
-		if testErr := tester.TestConnection(models[0]); testErr != nil {
-			ui.PrintError(fmt.Sprintf("API 连接测试失败: %v", testErr))
+		testModels := config.GetRepresentativeModels(models)
+		var failedModel string
+		var testErr error
+		for _, testModel := range testModels {
+			formatName := config.APIFormatName(config.ClassifyModel(testModel))
+			ui.PrintInfo(fmt.Sprintf("正在测试 %s（%s）...", testModel, formatName))
+			if testErr = tester.TestConnection(testModel); testErr != nil {
+				failedModel = testModel
+				break
+			}
+		}
+		if failedModel != "" {
+			ui.PrintError(fmt.Sprintf("模型 %s 的 API 连接测试失败: %v", failedModel, testErr))
 			action, aerr := collector.CollectTestFailedAction()
 			if aerr != nil {
 				ui.PrintError(fmt.Sprintf("读取选择失败: %v", aerr))
@@ -170,7 +181,7 @@ func runFullConfiguration(collector *input.Collector) {
 				os.Exit(1)
 			}
 		} else {
-			ui.PrintSuccess("API 连接测试成功！")
+			ui.PrintSuccess(fmt.Sprintf("已完成 %d 种 API 格式的连接测试！", len(testModels)))
 			fmt.Println()
 		}
 		break
