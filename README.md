@@ -75,7 +75,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://cnb.co
 |----------|-------------|--------|--------------|
 | `anthropic-messages` | `dmxapi-anthropic` | `@ai-sdk/anthropic` | `claude-opus-4-5-20251101`、`claude-sonnet-4-20250514`、`my-model-cc` |
 | `google-generative-ai`（扩展） | `dmxapi-google` | `@ai-sdk/google` | `gemini-2.5-pro`、`gemini-2.5-flash`、`gemma-3-27b` |
-| `openai-responses` | `dmxapi-openai-responses` | `@ai-sdk/openai` | `gpt-5`、`gpt-5-mini`、`o1-preview`、`o3-mini`、`o4-mini` |
+| `openai-responses` | `dmxapi-openai-responses` | `@ai-sdk/openai` | `gpt-5`、`gpt-5-mini`、`gpt-6-astra`、`o1-preview`、`o3-mini`、`grok-4.6` |
 | `openai-chat-completions` | `dmxapi-openai` | `@ai-sdk/openai-compatible` | `gpt-4o`、`DeepSeek-V3`、`qwen-max`、未知模型 |
 
 模型匹配优先级如下：
@@ -98,7 +98,7 @@ URL 可以填写服务根地址、版本根路径或完整接口路径，例如�
 - `https://www.dmxapi.cn/v1/chat/completions`、`/v1/messages`、`/v1/responses`
 - Google Generative AI 的 `...:generateContent` 地址
 
-工具会按目标协议去除已存在的同类 endpoint 段，再拼接 SDK 所需路径，避免重复出现 `/v1/v1`、`/v1beta/v1beta`；自定义 base path、查询参数和尾部斜杠会被保留。生成配置时 Anthropic、OpenAI Chat、OpenAI Responses 默认使用 `/v1`，Google 使用 `/v1beta`。
+工具会按目标协议去除已存在的同类 endpoint 段，再拼接 SDK 所需路径，避免重复出现 `/v1/v1`、`/v1beta/v1beta`；自定义 base path、查询参数和尾部斜杠会被保留。根地址生成配置时 Anthropic、OpenAI Chat、OpenAI Responses 默认使用 `/v1`，Google 使用 `/v1beta`；如果用户明确填写了 `/v1` 或 `/v1beta`，则保留用户指定的版本。
 
 完整配置会按协议分组，每组只使用该组的第一个模型测试一次连接；混合模型不会因为只测试 `models[0]` 而漏掉其他协议。选择“仅模型配置”时不发起网络测试，只更新模型列表并保留已有 URL 和 API Key。
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
+	"strings"
 	"time"
 
 	"dmxapi-config/internal/config"
@@ -56,10 +56,8 @@ type Tester struct {
 
 // NewTester 创建新的API测试器
 func NewTester(baseURL, apiKey string) *Tester {
-	// 规范化 baseURL：去掉末尾的版本路径后缀（/v1、/v1beta 等），避免后续拼接路径时产生重复
-	baseURL = config.NormalizeBaseURL(baseURL)
 	return &Tester{
-		baseURL: baseURL,
+		baseURL: strings.TrimSpace(strings.TrimRight(baseURL, "/")),
 		apiKey:  apiKey,
 		client: &http.Client{
 			Timeout: 60 * time.Second,
@@ -152,7 +150,7 @@ func (t *Tester) TestConnection(model string) error {
 
 // doRequest 发送 POST JSON 请求，返回状态码与响应体（限制 1MiB）。
 // 请求体序列化、Bearer 认证、超时、响应读取的公共逻辑集中在此。
-func (t *Tester) doRequest(reqURL string, body any) (int, []byte, error) {
+func (t *Tester) doRequest(format config.APIFormat, reqURL string, body any) (int, []byte, error) {
 	jsonData, err := json.Marshal(body)
 	if err != nil {
 		return 0, nil, fmt.Errorf("序列化请求失败: %w", err)
@@ -163,6 +161,15 @@ func (t *Tester) doRequest(reqURL string, body any) (int, []byte, error) {
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+t.apiKey)
+	switch format {
+	case config.APIFormatAnthropic:
+		// DMXAPI 网关接受 Bearer；原生 Anthropic 同时需要这两个头。
+		httpReq.Header.Set("x-api-key", t.apiKey)
+		httpReq.Header.Set("anthropic-version", "2023-06-01")
+	case config.APIFormatGoogle:
+		// Google 原生接口使用 x-goog-api-key，DMXAPI 仍保留 Bearer 兼容。
+		httpReq.Header.Set("x-goog-api-key", t.apiKey)
+	}
 
 	resp, err := t.client.Do(httpReq)
 	if err != nil {
@@ -179,7 +186,7 @@ func (t *Tester) doRequest(reqURL string, body any) (int, []byte, error) {
 
 // testAnthropicConnection 使用 Anthropic Messages API 测试连接
 func (t *Tester) testAnthropicConnection(model string) error {
-	status, body, err := t.doRequest(t.baseURL+"/v1/messages", AnthropicRequest{
+	status, body, err := t.doRequest(config.APIFormatAnthropic, config.BuildAPIEndpoint(t.baseURL, config.APIFormatAnthropic, model), AnthropicRequest{
 		Model:     model,
 		MaxTokens: 10,
 		Messages:  []Message{{Role: "user", Content: "Hi"}},
@@ -210,8 +217,8 @@ func (t *Tester) testAnthropicConnection(model string) error {
 // URL 格式与 opencode 配置中 @ai-sdk/google baseURL(url+"/v1beta") 一致：
 // {baseURL}/v1beta/models/{model}:generateContent
 func (t *Tester) testGoogleConnection(model string) error {
-	reqURL := fmt.Sprintf("%s/v1beta/models/%s:generateContent", t.baseURL, url.PathEscape(model))
-	status, body, err := t.doRequest(reqURL, GeminiRequest{
+	reqURL := config.BuildAPIEndpoint(t.baseURL, config.APIFormatGoogle, model)
+	status, body, err := t.doRequest(config.APIFormatGoogle, reqURL, GeminiRequest{
 		Contents: []GeminiContent{{Parts: []GeminiPart{{Text: "Hi"}}}},
 	})
 	if err != nil {
@@ -238,7 +245,7 @@ func (t *Tester) testGoogleConnection(model string) error {
 
 // testOpenAIResponsesConnection 使用 OpenAI Responses API 测试连接
 func (t *Tester) testOpenAIResponsesConnection(model string) error {
-	status, body, err := t.doRequest(t.baseURL+"/v1/responses", OpenAIResponsesRequest{
+	status, body, err := t.doRequest(config.APIFormatOpenAIResponses, config.BuildAPIEndpoint(t.baseURL, config.APIFormatOpenAIResponses, model), OpenAIResponsesRequest{
 		Model: model,
 		Input: "Hi",
 	})
@@ -266,7 +273,7 @@ func (t *Tester) testOpenAIResponsesConnection(model string) error {
 
 // testOpenAIConnection 使用 OpenAI Chat Completions API 测试连接
 func (t *Tester) testOpenAIConnection(model string) error {
-	status, body, err := t.doRequest(t.baseURL+"/v1/chat/completions", ChatRequest{
+	status, body, err := t.doRequest(config.APIFormatOpenAIChat, config.BuildAPIEndpoint(t.baseURL, config.APIFormatOpenAIChat, model), ChatRequest{
 		Model:    model,
 		Messages: []Message{{Role: "user", Content: "Hi"}},
 	})
